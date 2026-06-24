@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ult Stacker — Overwatch Coach Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+/* ── siege.css tokens (injected) ── */
+:root {
+  --gold:         #c9a84c;
+  --gold-dim:     #8a6f2e;
+  --gold-glow:    rgba(201,168,76,0.20);
+  --gold-subtle:  rgba(201,168,76,0.07);
+  --blood:        #8b1a1a;
+  --blood-bright: #c02020;
+  --blood-dim:    #5a1010;
+  --surface:      #0d0b09;
+  --surface2:     #141210;
+  --surface3:     #1c1916;
+  --surface4:     #26221e;
+  --surface5:     #312c27;
+  --text:         #e8dcc8;
+  --text-dim:     #9a8870;
+  --text-muted:   #5c5040;
+  --border-gold:  rgba(201,168,76,0.28);
+  --border-dim:   rgba(201,168,76,0.10);
+  --shadow:       rgba(0,0,0,0.6);
+  --radius:       4px;
+  --radius-lg:    8px;
+  --transition:   0.2s ease;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Crimson Pro', Georgia, serif;
+  background: var(--surface);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse 90% 50% at 50% 0%, rgba(139,26,26,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 20% 80%, rgba(201,168,76,0.04) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a84c' fill-opacity='0.022'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+h1,h2,h3,h4,.cinzel { font-family: 'Cinzel', serif; letter-spacing: 0.05em; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface2); }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+/* Shared button base */
+.btn {
+  font-family: 'Cinzel', serif; font-size: 0.75rem; font-weight: 600;
+  letter-spacing: 0.08em; padding: 0.45rem 1rem;
+  border-radius: var(--radius); cursor: pointer;
+  transition: all var(--transition); border: 1px solid transparent;
+  display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: var(--surface); border-color: var(--gold);
+}
+.btn-gold:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--gold), #e8c060);
+  box-shadow: 0 0 16px var(--gold-glow);
+}
+.btn-ghost { background: none; color: var(--text-dim); border-color: var(--border-dim); }
+.btn-ghost:hover:not(:disabled) { color: var(--gold); border-color: var(--border-gold); background: var(--surface3); }
+.btn-danger { background: none; color: var(--blood-bright); border-color: rgba(192,32,32,0.3); }
+.btn-danger:hover:not(:disabled) { background: rgba(192,32,32,0.1); border-color: var(--blood-bright); }
+.btn-sm { font-size: 0.65rem; padding: 0.3rem 0.65rem; }
+.badge {
+  display: inline-block; font-family: 'Cinzel', serif; font-size: 0.6rem;
+  font-weight: 700; letter-spacing: 0.1em; padding: 0.15rem 0.5rem; border-radius: 2px;
+}
+.badge-gold  { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid var(--border-gold); }
+.badge-blood { background: rgba(139,26,26,0.2); color: #e05050; border: 1px solid rgba(139,26,26,0.4); }
+.badge-dim   { background: var(--surface3); color: var(--text-dim); border: 1px solid var(--border-dim); }
+.badge-teal  { background: rgba(106,173,187,0.1); color: #6aadbb; border: 1px solid rgba(106,173,187,0.3); }
+.badge-green { background: rgba(138,170,106,0.1); color: #8aaa6a; border: 1px solid rgba(138,170,106,0.3); }
+.divider {
+  display: flex; align-items: center; gap: 0.75rem;
+  color: var(--gold-dim); font-size: 0.65rem; letter-spacing: 0.3em; margin: 0.75rem 0;
+}
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-gold); }
+.section-title {
+  font-family: 'Cinzel', serif; font-size: 0.8rem; font-weight: 700;
+  letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase;
+}
+.form-input {
+  background: var(--surface3); color: var(--text);
+  border: 1px solid var(--border-dim); border-radius: var(--radius);
+  padding: 0.45rem 0.75rem; font-family: 'Crimson Pro', serif; font-size: 0.95rem;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  outline: none;
+}
+.form-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-glow); }
+.modal-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.75); align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--surface2); border: 1px solid var(--border-gold);
+  border-radius: var(--radius-lg); box-shadow: 0 8px 40px var(--shadow);
+  width: 100%; max-width: 420px;
+  animation: modal-in 0.25s ease;
+}
+@keyframes modal-in { from { opacity:0; transform: scale(0.96) translateY(-12px); } to { opacity:1; transform: none; } }
+.modal-header {
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-gold);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700; color: var(--gold); }
+.modal-close { background: none; border: none; color: var(--text-dim); font-size: 1.2rem; cursor: pointer; }
+.modal-close:hover { color: var(--gold); }
+.modal-body { padding: 1.25rem; }
+.modal-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border-dim); display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+/* ── App shell ── */
+#app-header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border-gold);
+  box-shadow: 0 2px 20px var(--shadow);
+}
+.header-inner {
+  display: flex; align-items: center;
+  padding: 0.6rem 1.25rem; gap: 1rem;
+}
+.app-title {
+  font-family: 'Cinzel', serif; font-size: 1.05rem; font-weight: 900;
+  color: var(--gold); white-space: nowrap;
+  display: flex; align-items: baseline; gap: 0.5rem;
+}
+.app-title .sub {
+  font-size: 0.6rem; font-weight: 400; color: var(--text-muted);
+  letter-spacing: 0.15em; text-transform: uppercase;
+}
+.nav-tabs { display: flex; gap: 0.25rem; flex: 1; justify-content: center; list-style: none; }
+.nav-tab {
+  font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.1em; padding: 0.45rem 1rem; color: var(--text-dim);
+  border: 1px solid transparent; border-radius: var(--radius);
+  cursor: pointer; transition: all var(--transition); background: none;
+  white-space: nowrap;
+}
+.nav-tab:hover { color: var(--gold); border-color: var(--border-gold); background: var(--surface3); }
+.nav-tab.active {
+  color: var(--gold); background: var(--surface3); border-color: var(--border-gold);
+  box-shadow: 0 0 12px var(--gold-glow), inset 0 1px 0 var(--border-gold);
+}
+
+/* ── Screens ── */
+.screen { display: none; }
+.screen.active { display: flex; }
+
+/* ═══════════════════════════════════════════
+   SETUP SCREEN
+═══════════════════════════════════════════ */
+#setup {
+  flex-direction: column;
+  padding: 2rem 1.25rem;
+  max-width: 1000px; margin: 0 auto; width: 100%;
+}
+.setup-heading {
+  text-align: center; margin-bottom: 0.4rem;
+  font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 700; color: var(--gold);
+  letter-spacing: 0.08em;
+}
+.setup-sub {
+  text-align: center; margin-bottom: 2rem;
+  font-size: 0.95rem; color: var(--text-dim); font-style: italic;
+}
+.teams-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.team-panel {
+  background: var(--surface2); border: 1px solid var(--border-dim);
+  border-radius: var(--radius-lg); padding: 1.25rem;
+  transition: border-color var(--transition);
+}
+.team-panel:hover { border-color: var(--border-gold); }
+.team-panel-a { border-top: 2px solid var(--gold); }
+.team-panel-b { border-top: 2px solid var(--blood-bright); }
+.team-hdr {
+  display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;
+  padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-dim);
+}
+.team-name-input {
+  background: var(--surface3); color: var(--gold);
+  border: 1px solid var(--border-dim); border-radius: var(--radius);
+  padding: 0.35rem 0.65rem;
+  font-family: 'Cinzel', serif; font-size: 0.9rem; font-weight: 700;
+  letter-spacing: 0.05em; outline: none; width: 160px;
+  transition: border-color var(--transition);
+}
+.team-name-input:focus { border-color: var(--gold); }
+.team-name-input.team-b-input:focus { border-color: var(--blood-bright); }
+.hero-count { font-size: 0.75rem; color: var(--text-muted); font-family: 'Cinzel', serif; margin-left: auto; }
+
+.role-section { margin-bottom: 0.85rem; }
+.role-label {
+  font-family: 'Cinzel', serif; font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+.hero-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.hero-chip {
+  font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 600;
+  letter-spacing: 0.04em; padding: 0.25rem 0.6rem;
+  border-radius: var(--radius); cursor: pointer;
+  border: 1px solid var(--border-dim); background: var(--surface3);
+  color: var(--text-dim); transition: all var(--transition); user-select: none;
+}
+.hero-chip:hover { border-color: var(--border-gold); color: var(--text); }
+.chip-a { background: rgba(201,168,76,0.12); border-color: var(--gold); color: var(--gold); }
+.chip-b { background: rgba(139,26,26,0.18); border-color: var(--blood-bright); color: #e05050; }
+
+.setup-footer { display: flex; justify-content: center; padding-top: 1.5rem; }
+
+/* ═══════════════════════════════════════════
+   ANALYSIS SCREEN
+═══════════════════════════════════════════ */
+#analysis {
+  flex-direction: row;
+  height: calc(100vh - 53px);
+  overflow: hidden;
+}
+
+/* Benches */
+.bench {
+  width: 210px; flex-shrink: 0;
+  background: var(--surface2);
+  overflow-y: auto; padding: 1rem 0.75rem;
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+.bench-a { border-right: 1px solid var(--border-gold); }
+.bench-b { border-left: 1px solid var(--border-gold); }
+.bench-team-name {
+  font-family: 'Cinzel', serif; font-size: 0.8rem; font-weight: 900;
+  letter-spacing: 0.08em; margin-bottom: 0.1rem;
+}
+.bench-team-name-a { color: var(--gold); }
+.bench-team-name-b { color: #e05050; }
+.bench-role-group { margin-bottom: 0.5rem; }
+.bench-role-label {
+  font-family: 'Cinzel', serif; font-size: 0.55rem; font-weight: 700;
+  letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase;
+  margin-bottom: 0.35rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border-dim);
+}
+.bench-card {
+  background: var(--surface3); border: 1px solid var(--border-dim);
+  border-radius: var(--radius); padding: 0.45rem 0.6rem;
+  margin-bottom: 4px; cursor: pointer; transition: all var(--transition);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.bench-card:hover { border-color: var(--border-gold); background: var(--surface4); }
+.bench-card-a { border-left: 2px solid var(--gold-dim); }
+.bench-card-b { border-left: 2px solid var(--blood); }
+.bench-card.used { opacity: 0.25; pointer-events: none; }
+.bench-card-name { font-family: 'Cinzel', serif; font-size: 0.68rem; font-weight: 700; color: var(--text); flex: 1; }
+.bench-card-ult { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.add-glyph { color: var(--text-muted); font-size: 0.9rem; flex-shrink: 0; }
+.bench-card:hover .add-glyph { color: var(--gold); }
+
+/* Center stack */
+.stack-center {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface);
+}
+
+/* Advantage bar */
+.adv-wrap {
+  padding: 0.85rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border-gold);
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+.adv-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.35rem; }
+.adv-team {
+  font-family: 'Cinzel', serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em;
+}
+.adv-team-a { color: var(--gold); }
+.adv-team-b { color: #e05050; }
+.adv-score-a { font-size: 1.4rem; font-weight: 900; color: var(--gold); font-family: 'Cinzel', serif; }
+.adv-score-b { font-size: 1.4rem; font-weight: 900; color: #e05050; font-family: 'Cinzel', serif; }
+.adv-divider { font-size: 0.85rem; color: var(--text-muted); padding: 0 0.5rem; }
+.adv-track {
+  height: 8px; background: var(--surface4); border-radius: 4px;
+  position: relative; overflow: hidden; border: 1px solid var(--border-dim);
+}
+.adv-fill {
+  position: absolute; top: 0; height: 100%; border-radius: 4px;
+  transition: all 0.45s cubic-bezier(0.34,1.2,0.64,1);
+}
+.adv-verdict {
+  text-align: center; margin-top: 0.4rem;
+  font-size: 0.8rem; color: var(--text-dim); font-style: italic;
+}
+
+/* Stack entries */
+.stack-scroll { flex: 1; overflow-y: auto; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.stack-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; color: var(--text-muted); text-align: center; gap: 0.6rem;
+}
+.stack-empty-glyph { font-size: 2.5rem; opacity: 0.25; }
+.stack-empty p { font-size: 0.9rem; font-style: italic; }
+
+.stack-entry {
+  background: var(--surface2); border: 1px solid var(--border-dim);
+  border-radius: var(--radius); padding: 0.6rem 0.75rem;
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  animation: entry-in 0.2s ease;
+  transition: border-color var(--transition);
+}
+.stack-entry:hover { border-color: var(--border-gold); }
+@keyframes entry-in { from { opacity:0; transform: translateY(-5px); } to { opacity:1; transform: none; } }
+.entry-a { border-left: 3px solid var(--gold); }
+.entry-b { border-left: 3px solid var(--blood-bright); }
+.entry-num {
+  font-family: 'Cinzel', serif; font-size: 0.6rem; color: var(--text-muted);
+  min-width: 16px; text-align: right; padding-top: 2px;
+}
+.entry-team-tag {
+  font-family: 'Cinzel', serif; font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.05em; min-width: 20px; padding-top: 2px;
+}
+.entry-tag-a { color: var(--gold); }
+.entry-tag-b { color: #e05050; }
+.entry-info { flex: 1; min-width: 0; }
+.entry-hero {
+  font-family: 'Cinzel', serif; font-size: 0.8rem; font-weight: 700; color: var(--text);
+}
+.entry-ult { font-size: 0.8rem; color: var(--text-dim); }
+.entry-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 0.25rem; }
+.entry-tag {
+  font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem; border-radius: 2px;
+  background: var(--surface4); color: var(--text-muted); border: 1px solid var(--border-dim);
+}
+.entry-notes { margin-top: 0.35rem; }
+.entry-note {
+  font-size: 0.75rem; color: var(--text-dim); font-style: italic;
+  display: flex; align-items: flex-start; gap: 0.35rem; line-height: 1.4;
+}
+.note-arrow { color: var(--gold-dim); flex-shrink: 0; }
+.note-arrow-blood { color: #7a3030; }
+.entry-delta {
+  font-family: 'Cinzel', serif; font-size: 0.75rem; font-weight: 700;
+  min-width: 36px; text-align: right; padding-top: 2px; flex-shrink: 0;
+}
+.delta-a { color: var(--gold); }
+.delta-b { color: #e05050; }
+.delta-neutral { color: var(--text-muted); }
+.entry-remove {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 0.85rem; padding: 2px 4px; border-radius: 3px; flex-shrink: 0;
+  transition: all var(--transition); line-height: 1;
+}
+.entry-remove:hover { color: var(--blood-bright); background: rgba(192,32,32,0.1); }
+
+.stack-controls {
+  display: flex; gap: 0.5rem; padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border-dim); flex-shrink: 0;
+  background: var(--surface2);
+}
+
+/* Scenarios sidebar */
+.scenarios-panel {
+  width: 190px; flex-shrink: 0;
+  background: var(--surface2); border-left: 1px solid var(--border-gold);
+  padding: 1rem 0.75rem; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 0.65rem;
+}
+.scenarios-heading {
+  font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase;
+}
+.scenario-card {
+  background: var(--surface3); border: 1px solid var(--border-dim);
+  border-radius: var(--radius); padding: 0.6rem 0.7rem; cursor: pointer;
+  transition: all var(--transition);
+}
+.scenario-card:hover { border-color: var(--border-gold); }
+.scenario-name {
+  font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 700;
+  color: var(--gold); margin-bottom: 0.2rem;
+}
+.scenario-meta { font-size: 0.7rem; color: var(--text-dim); font-style: italic; }
+.scenario-actions { display: flex; gap: 0.3rem; margin-top: 0.4rem; }
+.no-scenarios { font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 1.5rem 0; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div id="app-header">
+  <div class="header-inner">
+    <div class="app-title">⚔ Ult Stack <span class="sub">Coach Tool</span></div>
+    <ul class="nav-tabs">
+      <li><button class="nav-tab active" id="nav-setup" onclick="showScreen('setup')">Roster</button></li>
+      <li><button class="nav-tab" id="nav-analysis" onclick="showScreen('analysis')">Analysis</button></li>
+    </ul>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="screen active" id="setup">
+  <h1 class="setup-heading">Build Your Rosters</h1>
+  <p class="setup-sub">Select up to 6 heroes per team, then head to Analysis to stack ultimates</p>
+  <div class="teams-grid">
+    <div class="team-panel team-panel-a" id="panel-a"></div>
+    <div class="team-panel team-panel-b" id="panel-b"></div>
+  </div>
+  <div class="setup-footer">
+    <button class="btn btn-gold btn-lg" id="go-btn" onclick="goToAnalysis()" disabled>Begin Analysis ⚔</button>
+  </div>
+</div>
+
+<!-- ANALYSIS -->
+<div class="screen" id="analysis">
+  <div class="bench bench-a" id="bench-a"></div>
+  <div class="stack-center">
+    <div class="adv-wrap">
+      <div class="adv-row">
+        <span class="adv-team adv-team-a" id="adv-name-a">Team A</span>
+        <span style="display:flex;align-items:baseline;gap:0.3rem;">
+          <span class="adv-score-a" id="score-a">0</span>
+          <span class="adv-divider">vs</span>
+          <span class="adv-score-b" id="score-b">0</span>
+        </span>
+        <span class="adv-team adv-team-b" id="adv-name-b">Team B</span>
+      </div>
+      <div class="adv-track">
+        <div class="adv-fill" id="adv-fill" style="left:50%;width:0;background:var(--gold);"></div>
+      </div>
+      <div class="adv-verdict" id="adv-verdict">Add ultimates to begin analysis</div>
+    </div>
+    <div class="stack-scroll" id="stack-scroll">
+      <div class="stack-empty" id="stack-empty">
+        <div class="stack-empty-glyph">⚡</div>
+        <p>Click a hero from either bench<br>to add their ultimate to the stack</p>
+      </div>
+    </div>
+    <div class="stack-controls">
+      <button class="btn btn-ghost btn-sm" onclick="undoLast()">↩ Undo</button>
+      <button class="btn btn-danger btn-sm" onclick="clearStack()">Clear</button>
+      <button class="btn btn-ghost btn-sm" onclick="openSaveModal()" style="margin-left:auto;">Save Scenario…</button>
+    </div>
+  </div>
+  <div class="scenarios-panel">
+    <div class="scenarios-heading">✦ Scenarios</div>
+    <button class="btn btn-ghost btn-sm" onclick="openSaveModal()" style="width:100%;justify-content:center;">+ Save current</button>
+    <div id="scenarios-list"></div>
+  </div>
+  <div class="bench bench-b" id="bench-b"></div>
+</div>
+
+<!-- Save modal -->
+<div class="modal-backdrop" id="save-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">✦ Save Scenario</span>
+      <button class="modal-close" onclick="closeSaveModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input class="form-input" id="scenario-name-input" type="text"
+        placeholder="e.g. Anti-dive opener" maxlength="40" style="width:100%;">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeSaveModal()">Cancel</button>
+      <button class="btn btn-gold btn-sm" onclick="confirmSave()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const HEROES = [
+  { id:'dva',      name:'D.Va',        role:'tank',    ult:'Self-Destruct',          tags:['aoe','bomb'],
+    effects:{ zarya:-3, rein:-2, sigma:-2, lucio:-1 }, countered_by:{ pharah:3, echo:2, lucio:2, bap:2 },
+    desc:'Massive AoE burst — wipes grouped targets' },
+  { id:'zarya',    name:'Zarya',       role:'tank',    ult:'Graviton Surge',         tags:['cc','group','setup'],
+    effects:{ dva:2, rein:2, pharah:2, mccree:2, soldier:2, reaper:2 }, countered_by:{ dva:-3, lucio:-3, pharah:-2, mei:-2 },
+    desc:'Pulls enemies together — enables follow-up ults' },
+  { id:'rein',     name:'Reinhardt',   role:'tank',    ult:'Earthshatter',           tags:['cc','ground','knockdown'],
+    effects:{ reaper:2, tracer:2, moira:2, soldier:2 }, countered_by:{ pharah:3, echo:3, dva:2, lucio:2 },
+    desc:'Ground CC — useless vs aerial heroes' },
+  { id:'sigma',    name:'Sigma',       role:'tank',    ult:'Gravitic Flux',          tags:['aoe','lift','cc'],
+    effects:{ reaper:2, zarya:2, soldier:2 }, countered_by:{ pharah:2, echo:2, dva:1 },
+    desc:'Lifts and slams — strong combo starter' },
+  { id:'hog',      name:'Roadhog',     role:'tank',    ult:'Whole Hog',              tags:['aoe','knockback','disrupt'],
+    effects:{ reaper:2, tracer:2, moira:2 }, countered_by:{ rein:2, sigma:2 },
+    desc:'Close-range knockback disruption' },
+  { id:'orisa',    name:'Orisa',       role:'tank',    ult:'Terra Surge',            tags:['aoe','charge','cc'],
+    effects:{ reaper:2, soldier:2, moira:2 }, countered_by:{ pharah:2, echo:2, lucio:1 },
+    desc:'Pulls inward and detonates' },
+  { id:'junker',   name:'Junker Queen',role:'tank',    ult:'Rampage',                tags:['anti-heal','bleed','engage'],
+    effects:{ lucio:2, ana:2, mercy:2, moira:2, bap:2 }, countered_by:{ mei:2, rein:1 },
+    desc:'Cuts healing — counters support-heavy teams' },
+  { id:'ram',      name:'Ramattra',    role:'tank',    ult:'Annihilation',           tags:['aoe','sustained','lockdown'],
+    effects:{ reaper:2, soldier:2, tracer:2, moira:2 }, countered_by:{ pharah:2, echo:2 },
+    desc:'Sustained AoE vortex — forces scatter or death' },
+  { id:'pharah',   name:'Pharah',      role:'damage',  ult:'Barrage',                tags:['aoe','aerial','projectile'],
+    effects:{ rein:3, zarya:2, sigma:2, dva:2 }, countered_by:{ soldier:3, mccree:3, bap:2 },
+    desc:'Airborne barrage — trivializes ground targets' },
+  { id:'reaper',   name:'Reaper',      role:'damage',  ult:'Death Blossom',          tags:['aoe','close','lifesteal'],
+    effects:{ rein:2, sigma:2, hog:2 }, countered_by:{ lucio:3, mei:2, pharah:2, dva:2 },
+    desc:'High close-range AoE — hard-countered by knockback' },
+  { id:'soldier',  name:'Soldier 76',  role:'damage',  ult:'Tactical Visor',         tags:['aimbot','sustained','hitscan'],
+    effects:{ pharah:3, tracer:2, genji:2 }, countered_by:{ dva:3, zarya:2, mccree:2 },
+    desc:'Perfect tracking — destroyed by Defense Matrix' },
+  { id:'mccree',   name:'Cassidy',     role:'damage',  ult:'Deadeye',                tags:['los','charge','high-dmg'],
+    effects:{ pharah:3, soldier:2, reaper:2 }, countered_by:{ sigma:3, dva:3, lucio:2 },
+    desc:'Long charge-up multi-kill — nullified by barriers' },
+  { id:'genji',    name:'Genji',       role:'damage',  ult:'Dragonblade',            tags:['melee','mobile','dive'],
+    effects:{ mercy:3, lucio:2, moira:2 }, countered_by:{ mccree:3, zarya:2, mei:2 },
+    desc:'Mobile melee burst — melts supports' },
+  { id:'tracer',   name:'Tracer',      role:'damage',  ult:'Pulse Bomb',             tags:['sticky','burst','mobile'],
+    effects:{ rein:2, sigma:2, hog:2 }, countered_by:{ zarya:3, soldier:2, dva:2 },
+    desc:'High-value pick potential — outranged by zoners' },
+  { id:'echo',     name:'Echo',        role:'damage',  ult:'Duplicate',              tags:['copy','versatile','aerial'],
+    effects:{ zarya:3, rein:2, sigma:2, dva:2 }, countered_by:{ soldier:2, mccree:2 },
+    desc:'Copies an enemy ult — versatility wildcard' },
+  { id:'mei',      name:'Mei',         role:'damage',  ult:'Blizzard',               tags:['cc','freeze','zone'],
+    effects:{ reaper:3, zarya:2, soldier:2, genji:2 }, countered_by:{ pharah:2, echo:2, lucio:1 },
+    desc:'Blanket freeze — trivializes grounded clusters' },
+  { id:'bastion',  name:'Bastion',     role:'damage',  ult:'Artillery',              tags:['aoe','burst','artillery'],
+    effects:{ rein:2, orisa:2, sigma:2 }, countered_by:{ pharah:2, echo:2, dva:2 },
+    desc:'Three precise AoE shells — punishes positioning' },
+  { id:'sym',      name:'Symmetra',    role:'damage',  ult:'Teleporter',             tags:['utility','flank','reposition'],
+    effects:{}, countered_by:{},
+    desc:'Team-wide instant repositioning — highly situational' },
+  { id:'lucio',    name:'Lúcio',       role:'support', ult:'Sound Barrier',          tags:['shields','instant','aoe'],
+    effects:{ dva:3, zarya:3, rein:2, mccree:2, soldier:2, reaper:2, orisa:2, ram:2 }, countered_by:{ sigma:2, pharah:1 },
+    desc:'Instant team-wide overshield — counters burst ults' },
+  { id:'mercy',    name:'Mercy',       role:'support', ult:'Valkyrie',               tags:['rez','sustain','mobility'],
+    effects:{ dva:2, soldier:2, reaper:2 }, countered_by:{ genji:3, tracer:2, pharah:2 },
+    desc:'Chain heals and rez — weak to dive' },
+  { id:'moira',    name:'Moira',       role:'support', ult:'Coalescence',            tags:['beam','heal','pierce'],
+    effects:{ reaper:2, soldier:2, rein:2 }, countered_by:{ pharah:2, echo:2, genji:2 },
+    desc:'Piercing beam — outranged by aerial heroes' },
+  { id:'ana',      name:'Ana',         role:'support', ult:'Nano Boost',             tags:['buff','single','amp'],
+    effects:{ genji:3, rein:3, pharah:3, dva:2 }, countered_by:{ tracer:2, dva:2, echo:2 },
+    desc:'Supercharges an ally ult — multiplies team value' },
+  { id:'bap',      name:'Baptiste',    role:'support', ult:'Amplification Matrix',   tags:['boost','beam','zone'],
+    effects:{ pharah:3, soldier:3, mccree:3 }, countered_by:{ genji:2, tracer:2 },
+    desc:'Doubles projectile damage — devastating with Pharah' },
+  { id:'kiri',     name:'Kiriko',      role:'support', ult:'Kitsune Rush',           tags:['speed','cooldown-reset','engage'],
+    effects:{ genji:2, dva:2, tracer:2, zarya:2 }, countered_by:{ mccree:2, soldier:2 },
+    desc:'Sprint + cooldown rush — enables aggressive plays' },
+  { id:'zen',      name:'Zenyatta',    role:'support', ult:'Transcendence',          tags:['immortal','channel','cleanse'],
+    effects:{}, countered_by:{ mccree:2, pharah:2 },
+    desc:'Near-immortal channel — counters almost all AoE' },
+  { id:'illari',   name:'Illari',      role:'support', ult:'Captive Sun',            tags:['aoe','burst','detonate'],
+    effects:{ rein:2, orisa:2, sigma:2, zarya:2 }, countered_by:{ pharah:2, dva:2, echo:1 },
+    desc:'Explosive orb marks — strong AoE follow-up' },
+];
+
+const ROLES_ORDER = ['tank','damage','support'];
+
+let state = {
+  teamA: { name:'Team A', heroes:[] },
+  teamB: { name:'Team B', heroes:[] },
+  stack: [],
+  scenarios: JSON.parse(localStorage.getItem('ow_ult_scenarios') || '[]'),
+};
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if (id === 'analysis') renderAnalysis();
+}
+
+function goToAnalysis() {
+  if (!state.teamA.heroes.length || !state.teamB.heroes.length) return;
+  state.stack = [];
+  showScreen('analysis');
+}
+
+// ── Setup ──────────────────────────────────────────────────────────────────
+function renderSetup() {
+  renderTeamPanel('a', document.getElementById('panel-a'));
+  renderTeamPanel('b', document.getElementById('panel-b'));
+  document.getElementById('go-btn').disabled = !state.teamA.heroes.length || !state.teamB.heroes.length;
+}
+
+function renderTeamPanel(t, el) {
+  const ts = state['team'+t.toUpperCase()];
+  const roleMap = {};
+  HEROES.forEach(h => { if (!roleMap[h.role]) roleMap[h.role]=[]; roleMap[h.role].push(h); });
+  const isA = t === 'a';
+  const inputClass = isA ? '' : 'team-b-input';
+  const chipSel = isA ? 'chip-a' : 'chip-b';
+  let html = `<div class="team-hdr">
+    <input class="team-name-input ${inputClass}" type="text" value="${ts.name}"
+      oninput="setTeamName('${t}',this.value)" maxlength="20">
+    <div class="hero-count">${ts.heroes.length}/6</div>
+  </div>`;
+  ROLES_ORDER.forEach(role => {
+    const heroes = roleMap[role]||[];
+    html += `<div class="role-section"><div class="role-label">${role}</div><div class="hero-chips">`;
+    heroes.forEach(h => {
+      const sel = ts.heroes.includes(h.id);
+      html += `<div class="hero-chip ${sel?chipSel:''}" onclick="toggleHero('${t}','${h.id}')">${h.name}</div>`;
+    });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function setTeamName(t, val) {
+  state['team'+t.toUpperCase()].name = val || (t==='a'?'Team A':'Team B');
+  if (document.getElementById('analysis').classList.contains('active')) {
+    document.getElementById('adv-name-a').textContent = state.teamA.name;
+    document.getElementById('adv-name-b').textContent = state.teamB.name;
+  }
+}
+
+function toggleHero(t, id) {
+  const ts = state['team'+t.toUpperCase()];
+  if (ts.heroes.includes(id)) ts.heroes = ts.heroes.filter(h=>h!==id);
+  else { if (ts.heroes.length>=6) return; ts.heroes.push(id); }
+  renderSetup();
+}
+
+// ── Analysis ───────────────────────────────────────────────────────────────
+function renderAnalysis() {
+  document.getElementById('adv-name-a').textContent = state.teamA.name;
+  document.getElementById('adv-name-b').textContent = state.teamB.name;
+  renderBench('a'); renderBench('b');
+  renderStack();
+  renderScenarios();
+}
+
+function renderBench(t) {
+  const ts = state['team'+t.toUpperCase()];
+  const usedIds = state.stack.filter(e=>e.team===t).map(e=>e.hero.id);
+  const el = document.getElementById('bench-'+t);
+  const roleMap = {};
+  ts.heroes.forEach(id => {
+    const h = HEROES.find(x=>x.id===id); if (!h) return;
+    if (!roleMap[h.role]) roleMap[h.role]=[];
+    roleMap[h.role].push(h);
+  });
+  const nameClass = t==='a' ? 'bench-team-name-a' : 'bench-team-name-b';
+  const cardClass = t==='a' ? 'bench-card-a' : 'bench-card-b';
+  let html = `<div class="bench-team-name ${nameClass}">${ts.name}</div>`;
+  if (!ts.heroes.length) { html += '<div class="no-scenarios">No heroes selected</div>'; el.innerHTML=html; return; }
+  ROLES_ORDER.forEach(role => {
+    const heroes = roleMap[role]; if (!heroes||!heroes.length) return;
+    html += `<div class="bench-role-group"><div class="bench-role-label">${role}</div>`;
+    heroes.forEach(h => {
+      const used = usedIds.includes(h.id);
+      html += `<div class="bench-card ${cardClass} ${used?'used':''}" onclick="addToStack('${t}','${h.id}')">
+        <div style="flex:1;min-width:0;">
+          <div class="bench-card-name">${h.name}</div>
+          <div class="bench-card-ult">${h.ult}</div>
+        </div>
+        <div class="add-glyph">+</div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function addToStack(team, heroId) {
+  const h = HEROES.find(x=>x.id===heroId); if (!h) return;
+  state.stack.push({hero:h, team});
+  renderBench('a'); renderBench('b'); renderStack();
+}
+
+function removeFromStack(idx) {
+  state.stack.splice(idx,1);
+  renderBench('a'); renderBench('b'); renderStack();
+}
+
+function undoLast() {
+  if (!state.stack.length) return;
+  state.stack.pop();
+  renderBench('a'); renderBench('b'); renderStack();
+}
+
+function clearStack() {
+  state.stack=[];
+  renderBench('a'); renderBench('b'); renderStack();
+}
+
+// ── Scoring ────────────────────────────────────────────────────────────────
+function computeRunning() {
+  // Returns array of {entry, runA, runB, delta, notes} per entry
+  let runA=0, runB=0;
+  return state.stack.map((entry, i) => {
+    const h = entry.hero;
+    const isA = entry.team==='a';
+    let bonus = 0;
+    const notes = [];
+    state.stack.slice(0,i).forEach(prev => {
+      const ph = prev.hero;
+      const opponent = prev.team !== entry.team;
+      if (opponent) {
+        const cv = h.effects[ph.id];
+        if (cv && cv>0) { bonus += cv; notes.push({text:`Counters ${ph.name}'s ${ph.ult}`, val:+cv, type:'counter'}); }
+        const wv = h.countered_by[ph.id];
+        if (wv && wv>0) { bonus -= wv; notes.push({text:`Countered by ${ph.name}'s ${ph.ult}`, val:-wv, type:'weak'}); }
+      } else {
+        const sv = h.effects[ph.id];
+        if (sv && sv>0) {
+          const syn = Math.ceil(sv*0.5);
+          bonus += syn; notes.push({text:`Synergy with ${ph.name}'s ${ph.ult}`, val:+syn, type:'synergy'});
+        }
+      }
+    });
+    const total = 2 + bonus;
+    const delta = total;
+    if (isA) runA = Math.max(0, runA + total); else runB = Math.max(0, runB + total);
+    return { entry, i, notes, delta, runA, runB };
+  });
+}
+
+function renderStack() {
+  const scroll = document.getElementById('stack-scroll');
+  const empty = document.getElementById('stack-empty');
+  const running = computeRunning();
+  const lastA = running.length ? running[running.length-1].runA : 0;
+  const lastB = running.length ? running[running.length-1].runB : 0;
+
+  document.getElementById('score-a').textContent = lastA;
+  document.getElementById('score-b').textContent = lastB;
+
+  const fill = document.getElementById('adv-fill');
+  const verdict = document.getElementById('adv-verdict');
+  const total = lastA + lastB;
+  if (!total) {
+    fill.style.left='50%'; fill.style.width='0';
+    verdict.textContent='Add ultimates to begin analysis';
+  } else {
+    const pA = lastA/total, pB = lastB/total;
+    if (pA > pB) {
+      fill.style.background='var(--gold)';
+      fill.style.left='50%'; fill.style.width=`${(pA-0.5)*200}%`;
+      const str = pA>=0.7?'Dominant advantage':pA>=0.6?'Clear advantage':'Slight edge';
+      verdict.textContent=`${state.teamA.name} leads +${lastA-lastB} — ${str}`;
+    } else if (pB > pA) {
+      fill.style.background='var(--blood-bright)';
+      fill.style.left=`${pA*100}%`; fill.style.width=`${(pB-0.5)*200}%`;
+      const str = pB>=0.7?'Dominant advantage':pB>=0.6?'Clear advantage':'Slight edge';
+      verdict.textContent=`${state.teamB.name} leads +${lastB-lastA} — ${str}`;
+    } else {
+      fill.style.left='50%'; fill.style.width='0';
+      verdict.textContent='Even matchup — neither side has clear advantage';
+    }
+  }
+
+  if (!state.stack.length) {
+    empty.style.display='flex';
+    Array.from(scroll.children).forEach(c=>{ if(c!==empty) c.remove(); });
+    return;
+  }
+  empty.style.display='none';
+  Array.from(scroll.children).forEach(c=>{ if(c!==empty) c.remove(); });
+
+  running.forEach(({entry, i, notes, delta}) => {
+    const h = entry.hero;
+    const isA = entry.team==='a';
+    const teamTag = isA ? state.teamA.name.slice(0,2).toUpperCase() : state.teamB.name.slice(0,2).toUpperCase();
+    const entryClass = isA ? 'entry-a' : 'entry-b';
+    const tagClass = isA ? 'entry-tag-a' : 'entry-tag-b';
+    const showDelta = notes.length > 0;
+    let deltaHtml = '';
+    if (showDelta) {
+      const net = delta - 2;
+      const cls = net>0 ? 'delta-a' : net<0 ? 'delta-b' : 'delta-neutral';
+      const sign = net>0 ? '+' : '';
+      deltaHtml = `<div class="entry-delta ${cls}">${sign}${net}</div>`;
+    }
+    const notesHtml = notes.map(n => {
+      const arrowClass = n.type==='weak' ? 'note-arrow-blood' : 'note-arrow';
+      const arrow = n.type==='weak' ? '✕' : n.type==='synergy' ? '✦' : '⚡';
+      return `<div class="entry-note"><span class="${arrowClass}">${arrow}</span> ${n.text}</div>`;
+    }).join('');
+
+    const el = document.createElement('div');
+    el.className = `stack-entry ${entryClass}`;
+    el.innerHTML = `
+      <div class="entry-num">${i+1}</div>
+      <div class="entry-team-tag ${tagClass}">${teamTag}</div>
+      <div class="entry-info">
+        <div><span class="entry-hero">${h.name}</span> <span class="entry-ult">— ${h.ult}</span></div>
+        <div class="entry-tags">${h.tags.map(t=>`<span class="entry-tag">${t}</span>`).join('')}</div>
+        ${notesHtml ? `<div class="entry-notes">${notesHtml}</div>` : ''}
+      </div>
+      ${deltaHtml}
+      <button class="entry-remove" onclick="removeFromStack(${i})" title="Remove">✕</button>`;
+    scroll.appendChild(el);
+  });
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+// ── Scenarios ──────────────────────────────────────────────────────────────
+function openSaveModal() {
+  document.getElementById('scenario-name-input').value='';
+  document.getElementById('save-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('scenario-name-input').focus(),60);
+}
+function closeSaveModal() { document.getElementById('save-modal').classList.remove('open'); }
+function confirmSave() {
+  const name = document.getElementById('scenario-name-input').value.trim();
+  if (!name) return;
+  const sc = {
+    id: Date.now(), name,
+    teamA:{...state.teamA}, teamB:{...state.teamB},
+    stack: state.stack.map(e=>({heroId:e.hero.id,team:e.team})),
+    savedAt: new Date().toLocaleString(),
+  };
+  state.scenarios.unshift(sc);
+  localStorage.setItem('ow_ult_scenarios', JSON.stringify(state.scenarios));
+  closeSaveModal();
+  renderScenarios();
+}
+function loadScenario(id) {
+  const sc = state.scenarios.find(s=>s.id===id); if (!sc) return;
+  state.teamA={...sc.teamA}; state.teamB={...sc.teamB};
+  state.stack = sc.stack.map(e=>({hero:HEROES.find(h=>h.id===e.heroId),team:e.team})).filter(e=>e.hero);
+  renderSetup(); renderAnalysis(); renderScenarios();
+}
+function deleteScenario(id) {
+  state.scenarios=state.scenarios.filter(s=>s.id!==id);
+  localStorage.setItem('ow_ult_scenarios', JSON.stringify(state.scenarios));
+  renderScenarios();
+}
+function renderScenarios() {
+  const el = document.getElementById('scenarios-list');
+  if (!state.scenarios.length) { el.innerHTML='<div class="no-scenarios">No saved scenarios</div>'; return; }
+  el.innerHTML = state.scenarios.map(sc=>`
+    <div class="scenario-card">
+      <div class="scenario-name">${sc.name}</div>
+      <div class="scenario-meta">${sc.teamA.name} vs ${sc.teamB.name} · ${sc.stack.length} ults</div>
+      <div class="scenario-actions">
+        <button class="btn btn-ghost btn-sm" onclick="loadScenario(${sc.id})">Load</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteScenario(${sc.id})">Del</button>
+      </div>
+    </div>`).join('');
+}
+
+document.addEventListener('keydown', e=>{
+  if (e.key==='Escape') closeSaveModal();
+  if (e.key==='Enter' && document.getElementById('save-modal').classList.contains('open')) confirmSave();
+});
+
+renderSetup();
+renderScenarios();
+</script>
+</body>
+</html>
