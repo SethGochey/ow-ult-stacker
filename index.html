@@ -478,88 +478,11 @@ h1,h2,h3,h4,.cinzel { font-family: 'Cinzel', serif; letter-spacing: 0.05em; }
 </div>
 
 <script>
-const HEROES = [
-  { id:'dva',      name:'D.Va',        role:'tank',    ult:'Self-Destruct',          tags:['aoe','bomb'],
-    effects:{ zarya:-3, rein:-2, sigma:-2, lucio:-1 }, countered_by:{ pharah:3, echo:2, lucio:2, bap:2 },
-    desc:'Massive AoE burst — wipes grouped targets' },
-  { id:'zarya',    name:'Zarya',       role:'tank',    ult:'Graviton Surge',         tags:['cc','group','setup'],
-    effects:{ dva:2, rein:2, pharah:2, mccree:2, soldier:2, reaper:2 }, countered_by:{ dva:-3, lucio:-3, pharah:-2, mei:-2 },
-    desc:'Pulls enemies together — enables follow-up ults' },
-  { id:'rein',     name:'Reinhardt',   role:'tank',    ult:'Earthshatter',           tags:['cc','ground','knockdown'],
-    effects:{ reaper:2, tracer:2, moira:2, soldier:2 }, countered_by:{ pharah:3, echo:3, dva:2, lucio:2 },
-    desc:'Ground CC — useless vs aerial heroes' },
-  { id:'sigma',    name:'Sigma',       role:'tank',    ult:'Gravitic Flux',          tags:['aoe','lift','cc'],
-    effects:{ reaper:2, zarya:2, soldier:2 }, countered_by:{ pharah:2, echo:2, dva:1 },
-    desc:'Lifts and slams — strong combo starter' },
-  { id:'hog',      name:'Roadhog',     role:'tank',    ult:'Whole Hog',              tags:['aoe','knockback','disrupt'],
-    effects:{ reaper:2, tracer:2, moira:2 }, countered_by:{ rein:2, sigma:2 },
-    desc:'Close-range knockback disruption' },
-  { id:'orisa',    name:'Orisa',       role:'tank',    ult:'Terra Surge',            tags:['aoe','charge','cc'],
-    effects:{ reaper:2, soldier:2, moira:2 }, countered_by:{ pharah:2, echo:2, lucio:1 },
-    desc:'Pulls inward and detonates' },
-  { id:'junker',   name:'Junker Queen',role:'tank',    ult:'Rampage',                tags:['anti-heal','bleed','engage'],
-    effects:{ lucio:2, ana:2, mercy:2, moira:2, bap:2 }, countered_by:{ mei:2, rein:1 },
-    desc:'Cuts healing — counters support-heavy teams' },
-  { id:'ram',      name:'Ramattra',    role:'tank',    ult:'Annihilation',           tags:['aoe','sustained','lockdown'],
-    effects:{ reaper:2, soldier:2, tracer:2, moira:2 }, countered_by:{ pharah:2, echo:2 },
-    desc:'Sustained AoE vortex — forces scatter or death' },
-  { id:'pharah',   name:'Pharah',      role:'damage',  ult:'Barrage',                tags:['aoe','aerial','projectile'],
-    effects:{ rein:3, zarya:2, sigma:2, dva:2 }, countered_by:{ soldier:3, mccree:3, bap:2 },
-    desc:'Airborne barrage — trivializes ground targets' },
-  { id:'reaper',   name:'Reaper',      role:'damage',  ult:'Death Blossom',          tags:['aoe','close','lifesteal'],
-    effects:{ rein:2, sigma:2, hog:2 }, countered_by:{ lucio:3, mei:2, pharah:2, dva:2 },
-    desc:'High close-range AoE — hard-countered by knockback' },
-  { id:'soldier',  name:'Soldier 76',  role:'damage',  ult:'Tactical Visor',         tags:['aimbot','sustained','hitscan'],
-    effects:{ pharah:3, tracer:2, genji:2 }, countered_by:{ dva:3, zarya:2, mccree:2 },
-    desc:'Perfect tracking — destroyed by Defense Matrix' },
-  { id:'mccree',   name:'Cassidy',     role:'damage',  ult:'Deadeye',                tags:['los','charge','high-dmg'],
-    effects:{ pharah:3, soldier:2, reaper:2 }, countered_by:{ sigma:3, dva:3, lucio:2 },
-    desc:'Long charge-up multi-kill — nullified by barriers' },
-  { id:'genji',    name:'Genji',       role:'damage',  ult:'Dragonblade',            tags:['melee','mobile','dive'],
-    effects:{ mercy:3, lucio:2, moira:2 }, countered_by:{ mccree:3, zarya:2, mei:2 },
-    desc:'Mobile melee burst — melts supports' },
-  { id:'tracer',   name:'Tracer',      role:'damage',  ult:'Pulse Bomb',             tags:['sticky','burst','mobile'],
-    effects:{ rein:2, sigma:2, hog:2 }, countered_by:{ zarya:3, soldier:2, dva:2 },
-    desc:'High-value pick potential — outranged by zoners' },
-  { id:'echo',     name:'Echo',        role:'damage',  ult:'Duplicate',              tags:['copy','versatile','aerial'],
-    effects:{ zarya:3, rein:2, sigma:2, dva:2 }, countered_by:{ soldier:2, mccree:2 },
-    desc:'Copies an enemy ult — versatility wildcard' },
-  { id:'mei',      name:'Mei',         role:'damage',  ult:'Blizzard',               tags:['cc','freeze','zone'],
-    effects:{ reaper:3, zarya:2, soldier:2, genji:2 }, countered_by:{ pharah:2, echo:2, lucio:1 },
-    desc:'Blanket freeze — trivializes grounded clusters' },
-  { id:'bastion',  name:'Bastion',     role:'damage',  ult:'Artillery',              tags:['aoe','burst','artillery'],
-    effects:{ rein:2, orisa:2, sigma:2 }, countered_by:{ pharah:2, echo:2, dva:2 },
-    desc:'Three precise AoE shells — punishes positioning' },
-  { id:'sym',      name:'Symmetra',    role:'damage',  ult:'Teleporter',             tags:['utility','flank','reposition'],
-    effects:{}, countered_by:{},
-    desc:'Team-wide instant repositioning — highly situational' },
-  { id:'lucio',    name:'Lúcio',       role:'support', ult:'Sound Barrier',          tags:['shields','instant','aoe'],
-    effects:{ dva:3, zarya:3, rein:2, mccree:2, soldier:2, reaper:2, orisa:2, ram:2 }, countered_by:{ sigma:2, pharah:1 },
-    desc:'Instant team-wide overshield — counters burst ults' },
-  { id:'mercy',    name:'Mercy',       role:'support', ult:'Valkyrie',               tags:['rez','sustain','mobility'],
-    effects:{ dva:2, soldier:2, reaper:2 }, countered_by:{ genji:3, tracer:2, pharah:2 },
-    desc:'Chain heals and rez — weak to dive' },
-  { id:'moira',    name:'Moira',       role:'support', ult:'Coalescence',            tags:['beam','heal','pierce'],
-    effects:{ reaper:2, soldier:2, rein:2 }, countered_by:{ pharah:2, echo:2, genji:2 },
-    desc:'Piercing beam — outranged by aerial heroes' },
-  { id:'ana',      name:'Ana',         role:'support', ult:'Nano Boost',             tags:['buff','single','amp'],
-    effects:{ genji:3, rein:3, pharah:3, dva:2 }, countered_by:{ tracer:2, dva:2, echo:2 },
-    desc:'Supercharges an ally ult — multiplies team value' },
-  { id:'bap',      name:'Baptiste',    role:'support', ult:'Amplification Matrix',   tags:['boost','beam','zone'],
-    effects:{ pharah:3, soldier:3, mccree:3 }, countered_by:{ genji:2, tracer:2 },
-    desc:'Doubles projectile damage — devastating with Pharah' },
-  { id:'kiri',     name:'Kiriko',      role:'support', ult:'Kitsune Rush',           tags:['speed','cooldown-reset','engage'],
-    effects:{ genji:2, dva:2, tracer:2, zarya:2 }, countered_by:{ mccree:2, soldier:2 },
-    desc:'Sprint + cooldown rush — enables aggressive plays' },
-  { id:'zen',      name:'Zenyatta',    role:'support', ult:'Transcendence',          tags:['immortal','channel','cleanse'],
-    effects:{}, countered_by:{ mccree:2, pharah:2 },
-    desc:'Near-immortal channel — counters almost all AoE' },
-  { id:'illari',   name:'Illari',      role:'support', ult:'Captive Sun',            tags:['aoe','burst','detonate'],
-    effects:{ rein:2, orisa:2, sigma:2, zarya:2 }, countered_by:{ pharah:2, dva:2, echo:1 },
-    desc:'Explosive orb marks — strong AoE follow-up' },
-];
 
-const ROLES_ORDER = ['tank','damage','support'];
+// ── Hero data — loaded from heroes.json at runtime ────────────────────────
+let HEROES = [];
+const ROLES_ORDER = ['tank', 'damage', 'support'];
+
 
 let state = {
   teamA: { name:'Team A', heroes:[] },
@@ -853,8 +776,54 @@ document.addEventListener('keydown', e=>{
   if (e.key==='Enter' && document.getElementById('save-modal').classList.contains('open')) confirmSave();
 });
 
-renderSetup();
-renderScenarios();
+// ── Bootstrap — fetch hero database then initialise ───────────────────────
+(async function init() {
+  // Show a loading indicator in case the fetch takes a moment
+  document.getElementById('setup').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                flex:1;gap:1rem;color:var(--text-dim);font-family:'Cinzel',serif;">
+      <div style="font-size:2rem;opacity:0.3;">⚔</div>
+      <div style="font-size:0.85rem;letter-spacing:0.15em;">Loading hero database…</div>
+    </div>`;
+
+  try {
+    const res = await fetch('./heroes.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    // Populate the module-level array
+    HEROES.push(...data.heroes);
+
+    // Restore the setup screen markup now that we have data
+    document.getElementById('setup').innerHTML = `
+      <h1 class="setup-heading">Build Your Rosters</h1>
+      <p class="setup-sub">Select up to 6 heroes per team, then head to Analysis to stack ultimates</p>
+      <div class="teams-grid">
+        <div class="team-panel team-panel-a" id="panel-a"></div>
+        <div class="team-panel team-panel-b" id="panel-b"></div>
+      </div>
+      <div class="setup-footer">
+        <button class="btn btn-gold btn-lg" id="go-btn" onclick="goToAnalysis()" disabled>Begin Analysis ⚔</button>
+      </div>`;
+
+    renderSetup();
+    renderScenarios();
+
+  } catch (err) {
+    console.error('Failed to load heroes.json:', err);
+    document.getElementById('setup').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                  flex:1;gap:0.75rem;color:var(--blood-bright);font-family:'Cinzel',serif;text-align:center;padding:2rem;">
+        <div style="font-size:2rem;">✕</div>
+        <div style="font-size:0.9rem;font-weight:700;letter-spacing:0.1em;">Failed to load hero database</div>
+        <div style="font-size:0.8rem;color:var(--text-dim);font-family:'Crimson Pro',serif;">
+          Could not fetch <code>heroes.json</code>. If running locally, serve the files with a
+          local server (e.g. <code>npx serve .</code>) rather than opening the HTML directly.
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:0.5rem;" onclick="location.reload()">↩ Retry</button>
+      </div>`;
+  }
+})();
 </script>
 </body>
 </html>
