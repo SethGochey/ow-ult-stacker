@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ult Stack — Hero DB Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:#c9a84c;--gold-dim:#8a6f2e;--gold-glow:rgba(201,168,76,0.20);
+  --blood:#8b1a1a;--blood-bright:#c02020;--blood-dim:#5a1010;
+  --surface:#0d0b09;--surface2:#141210;--surface3:#1c1916;--surface4:#26221e;--surface5:#312c27;
+  --text:#e8dcc8;--text-dim:#9a8870;--text-muted:#5c5040;
+  --border-gold:rgba(201,168,76,0.28);--border-dim:rgba(201,168,76,0.10);
+  --shadow:rgba(0,0,0,0.6);--radius:4px;--radius-lg:8px;--transition:0.2s ease;
+  --teal:#6aadbb;--green:#8aaa6a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Crimson Pro',Georgia,serif;background:var(--surface);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;
+  background-image:radial-gradient(ellipse 90% 50% at 50% 0%,rgba(139,26,26,0.10) 0%,transparent 60%),url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a84c' fill-opacity='0.022'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");}
+h1,h2,h3,h4{font-family:'Cinzel',serif;letter-spacing:0.05em;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--surface2);}::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:3px;}
+
+/* Buttons */
+.btn{font-family:'Cinzel',serif;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;padding:0.45rem 1rem;border-radius:var(--radius);cursor:pointer;transition:all var(--transition);border:1px solid transparent;display:inline-flex;align-items:center;gap:0.35rem;white-space:nowrap;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-gold{background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--surface);border-color:var(--gold);}
+.btn-gold:hover:not(:disabled){background:linear-gradient(135deg,var(--gold),#e8c060);box-shadow:0 0 16px var(--gold-glow);}
+.btn-ghost{background:none;color:var(--text-dim);border-color:var(--border-dim);}
+.btn-ghost:hover:not(:disabled){color:var(--gold);border-color:var(--border-gold);background:var(--surface3);}
+.btn-danger{background:none;color:var(--blood-bright);border-color:rgba(192,32,32,0.3);}
+.btn-danger:hover:not(:disabled){background:rgba(192,32,32,0.1);border-color:var(--blood-bright);}
+.btn-teal{background:none;color:var(--teal);border-color:rgba(106,173,187,0.35);}
+.btn-teal:hover:not(:disabled){background:rgba(106,173,187,0.1);border-color:var(--teal);}
+.btn-sm{font-size:0.65rem;padding:0.3rem 0.65rem;}
+.btn-lg{font-size:0.9rem;padding:0.65rem 1.5rem;}
+
+/* Forms */
+.form-group{display:flex;flex-direction:column;gap:0.35rem;}
+.form-label{font-family:'Cinzel',serif;font-size:0.7rem;font-weight:600;letter-spacing:0.1em;color:var(--text-dim);}
+.form-input,.form-select,.form-textarea{background:var(--surface3);color:var(--text);border:1px solid var(--border-dim);border-radius:var(--radius);padding:0.45rem 0.75rem;font-family:'Crimson Pro',serif;font-size:0.95rem;outline:none;width:100%;transition:border-color var(--transition),box-shadow var(--transition);}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-glow);}
+.form-select option{background:var(--surface3);}
+.form-textarea{resize:vertical;min-height:58px;font-size:0.88rem;}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.75rem;}
+.form-row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;}
+
+/* Badges */
+.badge{display:inline-block;font-family:'Cinzel',serif;font-size:0.6rem;font-weight:700;letter-spacing:0.1em;padding:0.15rem 0.5rem;border-radius:2px;}
+.badge-tank  {background:rgba(106,173,187,0.12);color:var(--teal);border:1px solid rgba(106,173,187,0.3);}
+.badge-damage{background:rgba(192,32,32,0.12);color:#e05050;border:1px solid rgba(192,32,32,0.3);}
+.badge-support{background:rgba(138,170,106,0.12);color:var(--green);border:1px solid rgba(138,170,106,0.3);}
+.badge-ult{background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid var(--border-gold);}
+.badge-ability{background:var(--surface4);color:var(--text-dim);border:1px solid var(--border-dim);}
+
+/* Header */
+#app-header{position:sticky;top:0;z-index:100;background:var(--surface2);border-bottom:1px solid var(--border-gold);box-shadow:0 2px 20px var(--shadow);}
+.header-inner{display:flex;align-items:center;padding:0.6rem 1.25rem;gap:1rem;}
+.app-title{font-family:'Cinzel',serif;font-size:1.05rem;font-weight:900;color:var(--gold);display:flex;align-items:baseline;gap:0.5rem;white-space:nowrap;}
+.app-title .sub{font-size:0.6rem;font-weight:400;color:var(--text-muted);letter-spacing:0.15em;text-transform:uppercase;}
+.header-status{font-size:0.75rem;color:var(--text-muted);font-style:italic;display:flex;align-items:center;gap:0.4rem;white-space:nowrap;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted);flex-shrink:0;}
+.status-dot.loaded{background:var(--green);}.status-dot.dirty{background:var(--gold);}
+
+/* Nav */
+.nav-tabs{display:flex;gap:0.25rem;}
+.nav-tab{font-family:'Cinzel',serif;font-size:0.72rem;font-weight:600;letter-spacing:0.1em;padding:0.45rem 1rem;color:var(--text-dim);border:1px solid transparent;border-radius:var(--radius);cursor:pointer;transition:all var(--transition);background:none;white-space:nowrap;}
+.nav-tab:hover{color:var(--gold);border-color:var(--border-gold);background:var(--surface3);}
+.nav-tab.active{color:var(--gold);background:var(--surface3);border-color:var(--border-gold);box-shadow:0 0 12px var(--gold-glow);}
+
+/* Views */
+.view{display:none;padding:1.5rem 1.25rem;max-width:1200px;margin:0 auto;width:100%;}
+.view.active{display:block;}
+
+/* Section */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.section-title{font-family:'Cinzel',serif;font-size:0.8rem;font-weight:700;letter-spacing:0.15em;color:var(--text-dim);text-transform:uppercase;}
+.divider{display:flex;align-items:center;gap:0.75rem;color:var(--gold-dim);font-size:0.65rem;letter-spacing:0.3em;margin:1.25rem 0;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border-gold);}
+
+/* Cards */
+.card{background:var(--surface2);border:1px solid var(--border-dim);border-radius:var(--radius-lg);padding:1rem 1.25rem;transition:border-color var(--transition);}
+.card:hover{border-color:var(--border-gold);}
+
+/* Tag grid */
+.tag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.75rem;}
+.tag-card{background:var(--surface2);border:1px solid var(--border-dim);border-radius:var(--radius);padding:0.75rem 1rem;display:flex;align-items:flex-start;gap:0.75rem;}
+.tag-card:hover{border-color:var(--border-gold);}
+.tag-card-body{flex:1;min-width:0;}
+.tag-id{font-family:'Cinzel',serif;font-size:0.75rem;font-weight:700;color:var(--gold);margin-bottom:0.2rem;}
+.tag-label{font-size:0.8rem;color:var(--text-dim);margin-bottom:0.1rem;}
+.tag-desc{font-size:0.78rem;color:var(--text-muted);font-style:italic;}
+.tag-actions{display:flex;gap:0.3rem;flex-shrink:0;}
+
+/* Relations table */
+.rel-table-wrap{overflow-x:auto;}
+.rel-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+.rel-table th{font-family:'Cinzel',serif;font-size:0.62rem;font-weight:700;letter-spacing:0.1em;color:var(--text-dim);padding:0.4rem 0.75rem;border-bottom:1px solid var(--border-gold);text-align:left;white-space:nowrap;}
+.rel-table td{padding:0.4rem 0.75rem;border-bottom:1px solid var(--border-dim);vertical-align:middle;}
+.rel-table tr:last-child td{border-bottom:none;}
+.rel-table tr:hover td{background:var(--surface3);}
+.ctx-badge{font-family:'Cinzel',serif;font-size:0.58rem;font-weight:700;letter-spacing:0.06em;padding:0.15rem 0.45rem;border-radius:2px;}
+.ctx-same  {background:rgba(138,170,106,0.12);color:var(--green);border:1px solid rgba(138,170,106,0.3);}
+.ctx-enemy {background:rgba(192,32,32,0.12);color:#e05050;border:1px solid rgba(192,32,32,0.3);}
+.ctx-either{background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid var(--border-gold);}
+.weight-pill{font-family:'Cinzel',serif;font-size:0.75rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:3px;display:inline-block;min-width:32px;text-align:center;}
+.w-pos{color:#22c55e;background:rgba(34,197,94,0.12);}
+.w-neg{color:#ef4444;background:rgba(239,68,68,0.12);}
+.w-zero{color:var(--text-muted);background:var(--surface4);}
+
+/* Hero list */
+.hero-list{display:flex;flex-direction:column;gap:6px;}
+.hero-row{background:var(--surface2);border:1px solid var(--border-dim);border-radius:var(--radius);transition:all var(--transition);}
+.hero-row:hover{border-color:var(--border-gold);}
+.hero-row-header{display:flex;align-items:center;gap:0.75rem;padding:0.6rem 1rem;cursor:pointer;}
+.hero-row-name{font-family:'Cinzel',serif;font-size:0.85rem;font-weight:700;flex:1;}
+.hero-row-actions{display:flex;gap:0.4rem;opacity:0;transition:opacity var(--transition);}
+.hero-row:hover .hero-row-actions{opacity:1;}
+.abilities-list{padding:0 1rem 0.75rem 2.5rem;display:flex;flex-direction:column;gap:5px;}
+.ability-row{background:var(--surface3);border:1px solid var(--border-dim);border-radius:var(--radius);padding:0.45rem 0.75rem;display:flex;align-items:center;gap:0.6rem;}
+.ability-row:hover{border-color:var(--border-gold);}
+.ability-name{font-size:0.82rem;font-weight:600;flex:1;}
+.ability-tags{display:flex;gap:3px;flex-wrap:wrap;}
+.tag-chip{font-family:'Cinzel',serif;font-size:0.55rem;letter-spacing:0.05em;padding:0.1rem 0.35rem;border-radius:2px;background:var(--surface4);color:var(--text-muted);border:1px solid var(--border-dim);}
+.ability-actions{display:flex;gap:0.3rem;opacity:0;transition:opacity var(--transition);}
+.ability-row:hover .ability-actions{opacity:1;}
+.add-ability-btn{background:none;border:1px dashed var(--border-dim);border-radius:var(--radius);padding:0.35rem 0.75rem;color:var(--text-muted);font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.1em;cursor:pointer;width:100%;text-align:center;transition:all var(--transition);margin-top:2px;}
+.add-ability-btn:hover{border-color:var(--border-gold);color:var(--gold);}
+
+/* Tag picker inside ability modal */
+.tag-picker{display:flex;flex-wrap:wrap;gap:5px;margin-top:0.35rem;}
+.tag-pick-chip{font-family:'Cinzel',serif;font-size:0.6rem;letter-spacing:0.05em;padding:0.2rem 0.55rem;border-radius:3px;border:1px solid var(--border-dim);background:var(--surface3);color:var(--text-dim);cursor:pointer;transition:all var(--transition);}
+.tag-pick-chip:hover{border-color:var(--border-gold);color:var(--text);}
+.tag-pick-chip.selected{background:rgba(201,168,76,0.15);border-color:var(--gold);color:var(--gold);}
+
+/* Export */
+.json-output{background:var(--surface2);border:1px solid var(--border-dim);border-radius:var(--radius);padding:1rem 1.25rem;font-family:'JetBrains Mono','Fira Code',monospace;font-size:0.78rem;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;max-height:62vh;overflow-y:auto;line-height:1.6;}
+.json-key{color:var(--gold);}.json-str{color:#8aaa6a;}.json-num{color:#6aadbb;}.json-bool{color:#e07050;}
+
+/* Toast */
+#toast-wrap{position:fixed;bottom:1.5rem;right:1.5rem;z-index:500;display:flex;flex-direction:column;gap:0.5rem;}
+.toast{font-family:'Cinzel',serif;font-size:0.75rem;padding:0.65rem 1rem;border-radius:var(--radius);background:var(--surface4);border:1px solid var(--border-gold);color:var(--text);box-shadow:0 4px 20px var(--shadow);animation:toast-in 0.25s ease;}
+.toast.error{border-color:var(--blood-bright);color:#e05050;}.toast.success{border-color:rgba(138,170,106,0.5);color:var(--green);}
+@keyframes toast-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* Modal */
+.modal-backdrop{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:1rem;}
+.modal-backdrop.open{display:flex;}
+.modal{background:var(--surface2);border:1px solid var(--border-gold);border-radius:var(--radius-lg);box-shadow:0 8px 40px var(--shadow);width:100%;max-width:540px;animation:modal-in 0.22s ease;max-height:90vh;display:flex;flex-direction:column;}
+@keyframes modal-in{from{opacity:0;transform:scale(0.96) translateY(-10px);}to{opacity:1;transform:none;}}
+.modal-header{padding:1rem 1.25rem;border-bottom:1px solid var(--border-gold);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.modal-title{font-family:'Cinzel',serif;font-size:1rem;font-weight:700;color:var(--gold);}
+.modal-close{background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;}
+.modal-close:hover{color:var(--gold);}
+.modal-body{padding:1.25rem;overflow-y:auto;flex:1;}
+.modal-footer{padding:1rem 1.25rem;border-top:1px solid var(--border-dim);display:flex;justify-content:flex-end;gap:0.5rem;flex-shrink:0;}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text-muted);font-style:italic;}
+.gap-row{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;}
+.mt-1{margin-top:0.5rem;}.mt-2{margin-top:1rem;}.mt-3{margin-top:1.5rem;}
+.mb-1{margin-bottom:0.5rem;}.mb-2{margin-bottom:1rem;}
+</style>
+</head>
+<body>
+
+<div id="app-header">
+  <div class="header-inner">
+    <div class="app-title">⚙ Hero DB Editor <span class="sub">v2 data model</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showView('heroes')">Heroes</button>
+      <button class="nav-tab" onclick="showView('tags')">Tags</button>
+      <button class="nav-tab" onclick="showView('relations')">Tag Relations</button>
+      <button class="nav-tab" onclick="showView('export')">Export</button>
+    </div>
+    <div style="display:flex;gap:0.5rem;align-items:center;margin-left:auto;">
+      <div class="header-status"><div class="status-dot" id="status-dot"></div><span id="status-text">No file loaded</span></div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+        Load heroes.json <input type="file" accept=".json" id="file-input" style="display:none;" onchange="loadFile(event)">
+      </label>
+      <button class="btn btn-gold btn-sm" onclick="downloadJSON()">Download ↓</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEROES VIEW -->
+<div class="view active" id="view-heroes">
+  <div class="section-header">
+    <div class="section-title">⚔ Heroes &amp; Abilities</div>
+    <div class="gap-row">
+      <input class="form-input" id="hero-search" placeholder="Filter…" oninput="renderHeroes()" style="width:160px;">
+      <select class="form-select" id="hero-role-filter" onchange="renderHeroes()" style="width:130px;">
+        <option value="">All roles</option>
+        <option value="tank">Tank</option>
+        <option value="damage">Damage</option>
+        <option value="support">Support</option>
+      </select>
+      <button class="btn btn-gold btn-sm" onclick="openHeroModal()">+ Add Hero</button>
+    </div>
+  </div>
+  <div class="hero-list" id="hero-list"><div class="empty-state">Load a heroes.json file to begin</div></div>
+</div>
+
+<!-- TAGS VIEW -->
+<div class="view" id="view-tags">
+  <div class="section-header">
+    <div class="section-title">✦ Tags</div>
+    <button class="btn btn-gold btn-sm" onclick="openTagModal()">+ Add Tag</button>
+  </div>
+  <p style="font-size:0.85rem;color:var(--text-dim);font-style:italic;margin-bottom:1rem;">Tags describe what an ability <em>does</em>. The scoring engine derives all interaction weights from tag pairs.</p>
+  <div class="tag-grid" id="tag-grid"><div class="empty-state">Load a heroes.json file to begin</div></div>
+</div>
+
+<!-- TAG RELATIONS VIEW -->
+<div class="view" id="view-relations">
+  <div class="section-header">
+    <div class="section-title">⚡ Tag Relations</div>
+    <button class="btn btn-gold btn-sm" onclick="openRelModal()">+ Add Relation</button>
+  </div>
+  <p style="font-size:0.85rem;color:var(--text-dim);font-style:italic;margin-bottom:1rem;">
+    Each row defines how tag <strong style="color:var(--gold);">A</strong> (earlier in stack) interacts with tag <strong style="color:var(--gold);">B</strong> (later in stack) in a given team context.<br>
+    <span style="font-size:0.8rem;">Positive weight = interaction benefits the team adding the later ability. Negative = it hurts them.</span>
+  </p>
+  <div class="rel-table-wrap">
+    <table class="rel-table">
+      <thead><tr>
+        <th>Tag A (earlier)</th><th>Tag B (later)</th><th>Context</th>
+        <th style="text-align:center;">Weight</th><th>Note</th><th style="width:80px;"></th>
+      </tr></thead>
+      <tbody id="rel-tbody"><tr><td colspan="6" class="empty-state">Load a heroes.json file to begin</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- EXPORT VIEW -->
+<div class="view" id="view-export">
+  <div class="section-header">
+    <div class="section-title">↓ Export heroes.json</div>
+    <div class="gap-row">
+      <button class="btn btn-teal btn-sm" onclick="copyJSON()">Copy to clipboard</button>
+      <button class="btn btn-gold btn-sm" onclick="downloadJSON()">Download heroes.json</button>
+    </div>
+  </div>
+  <p style="font-size:0.85rem;color:var(--text-dim);font-style:italic;margin-bottom:1rem;">Replace <code style="font-family:monospace;color:var(--gold);">heroes.json</code> in your repo with this file, then commit and push.</p>
+  <div class="json-output" id="json-preview">Load a heroes.json file first.</div>
+</div>
+
+<!-- ══ MODALS ══════════════════════════════════════════════════════════════ -->
+
+<!-- Hero modal -->
+<div class="modal-backdrop" id="hero-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="hero-modal-title">✦ Add Hero</span>
+      <button class="modal-close" onclick="closeModal('hero-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row mb-2">
+        <div class="form-group">
+          <label class="form-label">Hero ID <span style="color:var(--text-muted);font-size:0.6rem;">(lowercase, no spaces)</span></label>
+          <input class="form-input" id="hf-id" placeholder="e.g. mauga" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <input class="form-input" id="hf-name" placeholder="e.g. Mauga">
+        </div>
+      </div>
+      <div class="form-group mb-2">
+        <label class="form-label">Role</label>
+        <select class="form-select" id="hf-role">
+          <option value="tank">Tank</option>
+          <option value="damage">Damage</option>
+          <option value="support">Support</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('hero-modal')">Cancel</button>
+      <button class="btn btn-gold btn-sm" onclick="commitHero()">Save Hero</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ability modal -->
+<div class="modal-backdrop" id="ability-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="ability-modal-title">✦ Add Ability</span>
+      <button class="modal-close" onclick="closeModal('ability-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row mb-2">
+        <div class="form-group">
+          <label class="form-label">Ability ID</label>
+          <input class="form-input" id="af-id" placeholder="e.g. mauga_ult" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input class="form-input" id="af-name" placeholder="e.g. Cardiac Overdrive">
+        </div>
+      </div>
+      <div class="form-row mb-2">
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select class="form-select" id="af-type">
+            <option value="ult">Ultimate (ult)</option>
+            <option value="cooldown">Cooldown</option>
+            <option value="primary">Primary Fire</option>
+            <option value="secondary">Secondary Fire</option>
+            <option value="passive">Passive</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group mb-2">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="af-desc" placeholder="One-line summary of what this ability does"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tags</label>
+        <div class="tag-picker" id="ability-tag-picker"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('ability-modal')">Cancel</button>
+      <button class="btn btn-gold btn-sm" onclick="commitAbility()">Save Ability</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tag modal -->
+<div class="modal-backdrop" id="tag-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <span class="modal-title" id="tag-modal-title">✦ Add Tag</span>
+      <button class="modal-close" onclick="closeModal('tag-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row mb-2">
+        <div class="form-group">
+          <label class="form-label">Tag ID <span style="color:var(--text-muted);font-size:0.6rem;">(lowercase, hyphens ok)</span></label>
+          <input class="form-input" id="tf-id" placeholder="e.g. anti-heal" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Label</label>
+          <input class="form-input" id="tf-label" placeholder="e.g. Anti-Heal">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="tf-desc" placeholder="What does this tag mean mechanically?"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('tag-modal')">Cancel</button>
+      <button class="btn btn-gold btn-sm" onclick="commitTag()">Save Tag</button>
+    </div>
+  </div>
+</div>
+
+<!-- Relation modal -->
+<div class="modal-backdrop" id="rel-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <span class="modal-title" id="rel-modal-title">✦ Add Tag Relation</span>
+      <button class="modal-close" onclick="closeModal('rel-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-3 mb-2">
+        <div class="form-group">
+          <label class="form-label">Tag A <span style="color:var(--text-muted);font-size:0.58rem;">(earlier in stack)</span></label>
+          <select class="form-select" id="rf-a"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tag B <span style="color:var(--text-muted);font-size:0.58rem;">(later in stack)</span></label>
+          <select class="form-select" id="rf-b"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Context</label>
+          <select class="form-select" id="rf-context">
+            <option value="same">Same team</option>
+            <option value="enemy">Enemy team</option>
+            <option value="either">Either</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group mb-2">
+        <label class="form-label">Weight <span style="color:var(--text-muted);font-size:0.58rem;">(-3 to +3, positive = benefits team adding B)</span></label>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <input type="range" id="rf-weight-slider" min="-3" max="3" step="1" value="2"
+            oninput="document.getElementById('rf-weight-num').value=this.value"
+            style="flex:1;accent-color:var(--gold);">
+          <input type="number" id="rf-weight-num" min="-3" max="3" value="2"
+            oninput="document.getElementById('rf-weight-slider').value=this.value"
+            class="form-input" style="width:64px;text-align:center;">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note <span style="color:var(--text-muted);font-size:0.58rem;">(explain the interaction)</span></label>
+        <textarea class="form-textarea" id="rf-note" placeholder="e.g. Grouped targets maximise AoE value"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('rel-modal')">Cancel</button>
+      <button class="btn btn-gold btn-sm" onclick="commitRelation()">Save Relation</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm delete -->
+<div class="modal-backdrop" id="confirm-modal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <span class="modal-title" style="color:var(--blood-bright);">⚠ Confirm Remove</span>
+      <button class="modal-close" onclick="closeModal('confirm-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.95rem;" id="confirm-msg">Are you sure?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="runConfirm()">Remove</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let db = { _meta:{version:'2.0.0',description:'Ult Stack hero database',notes:[]}, tags:{}, tag_relations:[], heroes:[] };
+let dirty = false;
+
+// Modal context state
+let editingHeroId     = null;
+let editingAbility    = null; // {heroId, abilityId} or {heroId} for new
+let editingTagId      = null;
+let editingRelIndex   = null;
+let pendingConfirm    = null; // function to call on confirm
+
+const ROLES_ORDER     = ['tank','damage','support'];
+const ABILITY_TYPES   = ['ult','cooldown','primary','secondary','passive'];
+
+// ── File load ──────────────────────────────────────────────────────────────
+async function loadFile(evt) {
+  const file = evt.target.files[0]; if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    if (!parsed.heroes || !Array.isArray(parsed.heroes)) throw new Error('Missing heroes array');
+    db = parsed;
+    if (!db.tags) db.tags = {};
+    if (!db.tag_relations) db.tag_relations = [];
+    dirty = false;
+    setStatus('loaded', `${db.heroes.length} heroes, ${Object.keys(db.tags).length} tags, ${db.tag_relations.length} relations`);
+    renderAll();
+    toast(`Loaded ${file.name}`, 'success');
+  } catch(e) { toast('Parse error: ' + e.message, 'error'); }
+  evt.target.value = '';
+}
+
+// ── View switching ─────────────────────────────────────────────────────────
+const VIEW_TABS = ['heroes','tags','relations','export'];
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach((b,i) => b.classList.toggle('active', VIEW_TABS[i] === id));
+  document.getElementById('view-' + id).classList.add('active');
+  if (id === 'export')    renderExport();
+  if (id === 'relations') renderRelations();
+  if (id === 'tags')      renderTags();
+}
+
+function setStatus(state, text) {
+  document.getElementById('status-dot').className = 'status-dot ' + (dirty ? 'dirty' : state);
+  document.getElementById('status-text').textContent = dirty ? text + ' · unsaved' : text;
+}
+
+function markDirty() {
+  dirty = true;
+  setStatus('dirty', `${db.heroes.length} heroes`);
+}
+
+function renderAll() { renderHeroes(); renderTags(); renderRelations(); }
+
+// ── HEROES VIEW ────────────────────────────────────────────────────────────
+function renderHeroes() {
+  const search = document.getElementById('hero-search').value.toLowerCase();
+  const roleF  = document.getElementById('hero-role-filter').value;
+  const el = document.getElementById('hero-list');
+  if (!db.heroes.length) { el.innerHTML = '<div class="empty-state">Load a heroes.json file to begin</div>'; return; }
+
+  const grouped = {}; ROLES_ORDER.forEach(r => grouped[r] = []);
+  db.heroes.forEach(h => {
+    if (roleF && h.role !== roleF) return;
+    if (search && !h.name.toLowerCase().includes(search) && !h.id.includes(search)) return;
+    if (grouped[h.role]) grouped[h.role].push(h);
+  });
+
+  let html = '';
+  ROLES_ORDER.forEach(role => {
+    if (!grouped[role].length) return;
+    html += `<div class="divider">${role.toUpperCase()}</div>`;
+    grouped[role].forEach(h => {
+      const abilities = (h.abilities || []);
+      html += `<div class="hero-row" id="hrow-${h.id}">
+        <div class="hero-row-header">
+          <span class="badge badge-${h.role}">${h.role}</span>
+          <span class="hero-row-name">${h.name}</span>
+          <span style="font-size:0.75rem;color:var(--text-muted);">${abilities.length} ${abilities.length===1?'ability':'abilities'}</span>
+          <div class="hero-row-actions">
+            <button class="btn btn-ghost btn-sm" onclick="openHeroModal('${h.id}')">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="confirmAction('Remove hero <strong>${h.name}</strong> and all their abilities?',()=>deleteHero('${h.id}'))">✕</button>
+          </div>
+        </div>
+        <div class="abilities-list">
+          ${abilities.map(ab => `
+            <div class="ability-row">
+              <span class="badge ${ab.type==='ult'?'badge-ult':'badge-ability'}">${ab.type}</span>
+              <span class="ability-name">${ab.name}</span>
+              <div class="ability-tags">${(ab.tags||[]).map(t=>`<span class="tag-chip">${t}</span>`).join('')}</div>
+              <div class="ability-actions">
+                <button class="btn btn-ghost btn-sm" onclick="openAbilityModal('${h.id}','${ab.id}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="confirmAction('Remove ability <strong>${ab.name}</strong>?',()=>deleteAbility('${h.id}','${ab.id}'))">✕</button>
+              </div>
+            </div>`).join('')}
+          <button class="add-ability-btn" onclick="openAbilityModal('${h.id}')">+ Add Ability</button>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html || '<div class="empty-state">No heroes match filter</div>';
+}
+
+// ── Hero modal ─────────────────────────────────────────────────────────────
+function openHeroModal(id) {
+  editingHeroId = id || null;
+  document.getElementById('hero-modal-title').textContent = id ? `✦ Edit Hero` : '✦ Add Hero';
+  const hero = id ? db.heroes.find(h=>h.id===id) : null;
+  document.getElementById('hf-id').value   = hero?.id   || '';
+  document.getElementById('hf-id').disabled = !!id;
+  document.getElementById('hf-name').value = hero?.name || '';
+  document.getElementById('hf-role').value = hero?.role || 'tank';
+  openModal('hero-modal');
+  setTimeout(()=>document.getElementById(id?'hf-name':'hf-id').focus(),60);
+}
+
+function commitHero() {
+  const id   = document.getElementById('hf-id').value.trim();
+  const name = document.getElementById('hf-name').value.trim();
+  const role = document.getElementById('hf-role').value;
+  if (!id||!name) { toast('ID and name are required','error'); return; }
+  if (editingHeroId) {
+    const h = db.heroes.find(h=>h.id===editingHeroId);
+    if (h) { h.name=name; h.role=role; }
+  } else {
+    if (db.heroes.find(h=>h.id===id)) { toast(`ID "${id}" already exists`,'error'); return; }
+    db.heroes.push({id,name,role,abilities:[]});
+  }
+  closeModal('hero-modal'); markDirty(); renderHeroes();
+  toast(editingHeroId?`Updated ${name}`:`Added ${name}`,'success');
+}
+
+function deleteHero(id) {
+  db.heroes = db.heroes.filter(h=>h.id!==id);
+  markDirty(); renderHeroes(); closeModal('confirm-modal');
+  toast('Hero removed','success');
+}
+
+// ── Ability modal ──────────────────────────────────────────────────────────
+function openAbilityModal(heroId, abilityId) {
+  editingAbility = {heroId, abilityId: abilityId||null};
+  const hero = db.heroes.find(h=>h.id===heroId);
+  const ab   = abilityId ? (hero?.abilities||[]).find(a=>a.id===abilityId) : null;
+  document.getElementById('ability-modal-title').textContent = ab ? `✦ Edit Ability — ${hero.name}` : `✦ Add Ability — ${hero?.name}`;
+  document.getElementById('af-id').value   = ab?.id   || '';
+  document.getElementById('af-id').disabled = !!abilityId;
+  document.getElementById('af-name').value = ab?.name || '';
+  document.getElementById('af-type').value = ab?.type || 'ult';
+  document.getElementById('af-desc').value = ab?.desc || '';
+
+  // Tag picker
+  const selectedTags = new Set(ab?.tags || []);
+  const picker = document.getElementById('ability-tag-picker');
+  picker.innerHTML = Object.entries(db.tags).map(([id,tag])=>
+    `<span class="tag-pick-chip ${selectedTags.has(id)?'selected':''}" onclick="toggleTagPick(this,'${id}')" data-tag="${id}">${tag.label||id}</span>`
+  ).join('') || '<span style="color:var(--text-muted);font-size:0.8rem;font-style:italic;">No tags defined yet — add some in the Tags view first</span>';
+
+  openModal('ability-modal');
+  setTimeout(()=>document.getElementById(abilityId?'af-name':'af-id').focus(),60);
+}
+
+function toggleTagPick(el, tagId) {
+  el.classList.toggle('selected');
+}
+
+function commitAbility() {
+  const {heroId, abilityId} = editingAbility;
+  const id   = document.getElementById('af-id').value.trim();
+  const name = document.getElementById('af-name').value.trim();
+  const type = document.getElementById('af-type').value;
+  const desc = document.getElementById('af-desc').value.trim();
+  const tags = [...document.querySelectorAll('#ability-tag-picker .tag-pick-chip.selected')].map(el=>el.dataset.tag);
+  if (!id||!name) { toast('ID and name are required','error'); return; }
+  const hero = db.heroes.find(h=>h.id===heroId);
+  if (!hero) return;
+  if (!hero.abilities) hero.abilities = [];
+  if (abilityId) {
+    const ab = hero.abilities.find(a=>a.id===abilityId);
+    if (ab) Object.assign(ab,{name,type,tags,desc});
+  } else {
+    if (hero.abilities.find(a=>a.id===id)) { toast(`Ability ID "${id}" already exists on this hero`,'error'); return; }
+    hero.abilities.push({id,name,type,tags,desc});
+  }
+  closeModal('ability-modal'); markDirty(); renderHeroes();
+  toast(abilityId?`Updated ${name}`:`Added ${name}`,'success');
+}
+
+function deleteAbility(heroId, abilityId) {
+  const hero = db.heroes.find(h=>h.id===heroId);
+  if (hero) hero.abilities = (hero.abilities||[]).filter(a=>a.id!==abilityId);
+  markDirty(); renderHeroes(); closeModal('confirm-modal');
+  toast('Ability removed','success');
+}
+
+// ── TAGS VIEW ──────────────────────────────────────────────────────────────
+function renderTags() {
+  const el = document.getElementById('tag-grid');
+  const tags = Object.entries(db.tags);
+  if (!tags.length) { el.innerHTML = '<div class="empty-state">No tags defined</div>'; return; }
+  el.innerHTML = tags.map(([id,tag])=>`
+    <div class="tag-card">
+      <div class="tag-card-body">
+        <div class="tag-id">${id}</div>
+        <div class="tag-label">${tag.label||''}</div>
+        <div class="tag-desc">${tag.desc||''}</div>
+      </div>
+      <div class="tag-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openTagModal('${id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmAction('Remove tag <strong>${id}</strong>? This will also remove all relations using it.',()=>deleteTag('${id}'))">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function openTagModal(id) {
+  editingTagId = id||null;
+  const tag = id ? db.tags[id] : null;
+  document.getElementById('tag-modal-title').textContent = id ? `✦ Edit Tag — ${id}` : '✦ Add Tag';
+  document.getElementById('tf-id').value    = id||'';
+  document.getElementById('tf-id').disabled = !!id;
+  document.getElementById('tf-label').value = tag?.label||'';
+  document.getElementById('tf-desc').value  = tag?.desc ||'';
+  openModal('tag-modal');
+  setTimeout(()=>document.getElementById(id?'tf-label':'tf-id').focus(),60);
+}
+
+function commitTag() {
+  const id    = document.getElementById('tf-id').value.trim();
+  const label = document.getElementById('tf-label').value.trim();
+  const desc  = document.getElementById('tf-desc').value.trim();
+  if (!id) { toast('Tag ID is required','error'); return; }
+  if (editingTagId) {
+    db.tags[editingTagId] = {label,desc};
+  } else {
+    if (db.tags[id]) { toast(`Tag "${id}" already exists`,'error'); return; }
+    db.tags[id] = {label:label||id,desc};
+  }
+  closeModal('tag-modal'); markDirty(); renderTags();
+  toast(editingTagId?`Updated tag ${id}`:`Added tag ${id}`,'success');
+}
+
+function deleteTag(id) {
+  delete db.tags[id];
+  db.tag_relations = db.tag_relations.filter(r=>r.a!==id&&r.b!==id);
+  // Remove tag from all abilities
+  db.heroes.forEach(h=>(h.abilities||[]).forEach(ab=>{ab.tags=(ab.tags||[]).filter(t=>t!==id);}));
+  markDirty(); renderAll(); closeModal('confirm-modal');
+  toast(`Removed tag "${id}" and its relations`,'success');
+}
+
+// ── TAG RELATIONS VIEW ─────────────────────────────────────────────────────
+function renderRelations() {
+  const tbody = document.getElementById('rel-tbody');
+  if (!db.tag_relations.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No relations defined</td></tr>'; return; }
+  tbody.innerHTML = db.tag_relations.map((r,i)=>{
+    const wCls = r.weight>0?'w-pos':r.weight<0?'w-neg':'w-zero';
+    const sign = r.weight>0?'+':'';
+    return `<tr>
+      <td><span class="tag-chip">${r.a}</span></td>
+      <td><span class="tag-chip">${r.b}</span></td>
+      <td><span class="ctx-badge ctx-${r.context}">${r.context}</span></td>
+      <td style="text-align:center;"><span class="weight-pill ${wCls}">${sign}${r.weight}</span></td>
+      <td style="font-size:0.8rem;color:var(--text-dim);font-style:italic;">${r.note||''}</td>
+      <td>
+        <div style="display:flex;gap:0.3rem;">
+          <button class="btn btn-ghost btn-sm" onclick="openRelModal(${i})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmAction('Remove this tag relation?',()=>deleteRelation(${i}))">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function populateTagSelects(selectA, selectB) {
+  const opts = Object.entries(db.tags).map(([id,t])=>`<option value="${id}">${id}${t.label?' — '+t.label:''}</option>`).join('');
+  selectA.innerHTML = opts; selectB.innerHTML = opts;
+}
+
+function openRelModal(index) {
+  editingRelIndex = index != null ? index : null;
+  document.getElementById('rel-modal-title').textContent = index != null ? '✦ Edit Relation' : '✦ Add Tag Relation';
+  const r = index != null ? db.tag_relations[index] : null;
+  const selA = document.getElementById('rf-a');
+  const selB = document.getElementById('rf-b');
+  populateTagSelects(selA, selB);
+  selA.value = r?.a || (Object.keys(db.tags)[0]||'');
+  selB.value = r?.b || (Object.keys(db.tags)[1]||'');
+  document.getElementById('rf-context').value = r?.context || 'same';
+  const w = r?.weight ?? 2;
+  document.getElementById('rf-weight-slider').value = w;
+  document.getElementById('rf-weight-num').value    = w;
+  document.getElementById('rf-note').value = r?.note || '';
+  openModal('rel-modal');
+}
+
+function commitRelation() {
+  const a       = document.getElementById('rf-a').value;
+  const b       = document.getElementById('rf-b').value;
+  const context = document.getElementById('rf-context').value;
+  const weight  = parseInt(document.getElementById('rf-weight-num').value,10);
+  const note    = document.getElementById('rf-note').value.trim();
+  if (!a||!b) { toast('Both tags are required','error'); return; }
+  if (a===b)  { toast('Tag A and Tag B must be different','error'); return; }
+  if (isNaN(weight)||weight<-3||weight>3) { toast('Weight must be between -3 and +3','error'); return; }
+  const newRel = {a,b,context,weight,note};
+  if (editingRelIndex != null) {
+    db.tag_relations[editingRelIndex] = newRel;
+  } else {
+    // Enforce uniqueness on (a,b,context)
+    const exists = db.tag_relations.findIndex(r=>r.a===a&&r.b===b&&r.context===context);
+    if (exists>=0) { db.tag_relations[exists]=newRel; toast('Updated existing relation for this (A, B, context) triple','success'); }
+    else { db.tag_relations.push(newRel); }
+  }
+  closeModal('rel-modal'); markDirty(); renderRelations();
+  toast('Relation saved','success');
+}
+
+function deleteRelation(index) {
+  db.tag_relations.splice(index,1);
+  markDirty(); renderRelations(); closeModal('confirm-modal');
+  toast('Relation removed','success');
+}
+
+// ── Confirm helper ─────────────────────────────────────────────────────────
+function confirmAction(msg, fn) {
+  document.getElementById('confirm-msg').innerHTML = msg;
+  pendingConfirm = fn;
+  openModal('confirm-modal');
+}
+function runConfirm() { if (pendingConfirm) pendingConfirm(); pendingConfirm=null; }
+
+// ── Modals ─────────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function buildOutput() {
+  const out = JSON.parse(JSON.stringify(db));
+  const v = (out._meta?.version||'2.0.0').split('.').map(Number);
+  v[2]++; if(out._meta) out._meta.version=v.join('.');
+  return JSON.stringify(out,null,2);
+}
+
+function renderExport() {
+  const el = document.getElementById('json-preview');
+  if (!db.heroes.length&&!Object.keys(db.tags).length) { el.textContent='Load a heroes.json file first.'; return; }
+  el.innerHTML = syntaxHL(buildOutput());
+}
+
+function syntaxHL(json) {
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+\.?\d*)/g, m=>{
+    if (/^"/.test(m)) return /:$/.test(m)?`<span class="json-key">${m}</span>`:`<span class="json-str">${m}</span>`;
+    if (/true|false/.test(m)) return `<span class="json-bool">${m}</span>`;
+    return `<span class="json-num">${m}</span>`;
+  });
+}
+
+function copyJSON() {
+  navigator.clipboard.writeText(buildOutput()).then(()=>toast('Copied ✓','success')).catch(()=>toast('Copy failed — use Download','error'));
+}
+
+function downloadJSON() {
+  const blob = new Blob([buildOutput()],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='heroes.json'; a.click();
+  URL.revokeObjectURL(a.href); dirty=false;
+  setStatus('loaded',`${db.heroes.length} heroes — exported`);
+  toast('Downloaded heroes.json','success');
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg,type='') {
+  const el=document.createElement('div'); el.className=`toast ${type}`; el.textContent=msg;
+  document.getElementById('toast-wrap').appendChild(el); setTimeout(()=>el.remove(),3000);
+}
+
+// ── Keyboard ───────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  if (e.key==='Escape') document.querySelectorAll('.modal-backdrop.open').forEach(m=>m.classList.remove('open'));
+  if (e.key==='Enter') {
+    if (document.getElementById('hero-modal').classList.contains('open'))    commitHero();
+    else if (document.getElementById('tag-modal').classList.contains('open')) commitTag();
+  }
+});
+</script>
+</body>
+</html>
