@@ -478,24 +478,90 @@ h1,h2,h3,h4,.cinzel { font-family: 'Cinzel', serif; letter-spacing: 0.05em; }
 </div>
 
 <script>
+<script>
+// ── Runtime state ──────────────────────────────────────────────────────────
+let DB = { tags: {}, tag_relations: [], heroes: [] }; // populated from heroes.json
 
-// ── Hero data — loaded from heroes.json at runtime ────────────────────────
-let HEROES = [];
 const ROLES_ORDER = ['tank', 'damage', 'support'];
 
-
 let state = {
-  teamA: { name:'Team A', heroes:[] },
-  teamB: { name:'Team B', heroes:[] },
-  stack: [],
-  scenarios: JSON.parse(localStorage.getItem('ow_ult_scenarios') || '[]'),
+  teamA: { name: 'Team A', heroes: [] },  // array of heroIds
+  teamB: { name: 'Team B', heroes: [] },
+  stack: [],  // [{heroId, abilityId, team}]
+  scenarios: JSON.parse(localStorage.getItem('ow_ult_scenarios_v2') || '[]'),
 };
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+function getHero(id)    { return DB.heroes.find(h => h.id === id); }
+function getUlt(hero)   { return (hero?.abilities || []).find(a => a.type === 'ult'); }
+function getAbility(hero, abilityId) { return (hero?.abilities || []).find(a => a.id === abilityId); }
+
+// ── Scoring engine ─────────────────────────────────────────────────────────
+// For each new stack entry, score its interaction with every prior entry
+// by walking all (prevTag, newTag) pairs through tag_relations.
+function scoreInteraction(prevEntry, newEntry) {
+  const prevHero = getHero(prevEntry.heroId);
+  const newHero  = getHero(newEntry.heroId);
+  const prevAb   = getAbility(prevHero, prevEntry.abilityId);
+  const newAb    = getAbility(newHero,  newEntry.abilityId);
+  if (!prevAb || !newAb) return { weight: 0, notes: [] };
+
+  const sameTeam = prevEntry.team === newEntry.team;
+  const context  = sameTeam ? 'same' : 'enemy';
+
+  let weight = 0;
+  const notes = [];
+
+  (prevAb.tags || []).forEach(tagA => {
+    (newAb.tags || []).forEach(tagB => {
+      const rel = DB.tag_relations.find(r =>
+        r.a === tagA && r.b === tagB && (r.context === context || r.context === 'either')
+      );
+      if (!rel || rel.weight === 0) return;
+      weight += rel.weight;
+      notes.push({
+        weight: rel.weight,
+        text: rel.note || `${tagA} → ${tagB}`,
+        tagA, tagB,
+        prevName: prevHero.name,
+        prevAb: prevAb.name,
+        newAb: newAb.name,
+        type: rel.weight > 0 ? (sameTeam ? 'synergy' : 'counter') : 'weak',
+      });
+    });
+  });
+
+  return { weight, notes };
+}
+
+function computeRunning() {
+  let runA = 0, runB = 0;
+  return state.stack.map((entry, i) => {
+    const isA    = entry.team === 'a';
+    const BASE   = 2;
+    let bonus    = 0;
+    const notes  = [];
+
+    state.stack.slice(0, i).forEach(prev => {
+      const { weight, notes: iNotes } = scoreInteraction(prev, entry);
+      bonus += weight;
+      notes.push(...iNotes);
+    });
+
+    const total = BASE + bonus;
+    if (isA) runA = Math.max(0, runA + total);
+    else     runB = Math.max(0, runB + total);
+
+    return { entry, i, notes, delta: total, runA, runB };
+  });
+}
+
+// ── Screen nav ─────────────────────────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  document.getElementById('nav-'+id).classList.add('active');
+  document.getElementById('nav-' + id).classList.add('active');
   if (id === 'analysis') renderAnalysis();
 }
 
@@ -509,27 +575,35 @@ function goToAnalysis() {
 function renderSetup() {
   renderTeamPanel('a', document.getElementById('panel-a'));
   renderTeamPanel('b', document.getElementById('panel-b'));
-  document.getElementById('go-btn').disabled = !state.teamA.heroes.length || !state.teamB.heroes.length;
+  document.getElementById('go-btn').disabled =
+    !state.teamA.heroes.length || !state.teamB.heroes.length;
 }
 
 function renderTeamPanel(t, el) {
-  const ts = state['team'+t.toUpperCase()];
-  const roleMap = {};
-  HEROES.forEach(h => { if (!roleMap[h.role]) roleMap[h.role]=[]; roleMap[h.role].push(h); });
+  const ts = state['team' + t.toUpperCase()];
   const isA = t === 'a';
-  const inputClass = isA ? '' : 'team-b-input';
   const chipSel = isA ? 'chip-a' : 'chip-b';
+  const inputClass = isA ? '' : 'team-b-input';
+
+  const roleMap = {};
+  DB.heroes.forEach(h => {
+    if (!roleMap[h.role]) roleMap[h.role] = [];
+    roleMap[h.role].push(h);
+  });
+
   let html = `<div class="team-hdr">
     <input class="team-name-input ${inputClass}" type="text" value="${ts.name}"
       oninput="setTeamName('${t}',this.value)" maxlength="20">
     <div class="hero-count">${ts.heroes.length}/6</div>
   </div>`;
+
   ROLES_ORDER.forEach(role => {
-    const heroes = roleMap[role]||[];
+    const heroes = roleMap[role] || [];
+    if (!heroes.length) return;
     html += `<div class="role-section"><div class="role-label">${role}</div><div class="hero-chips">`;
     heroes.forEach(h => {
       const sel = ts.heroes.includes(h.id);
-      html += `<div class="hero-chip ${sel?chipSel:''}" onclick="toggleHero('${t}','${h.id}')">${h.name}</div>`;
+      html += `<div class="hero-chip ${sel ? chipSel : ''}" onclick="toggleHero('${t}','${h.id}')">${h.name}</div>`;
     });
     html += '</div></div>';
   });
@@ -537,7 +611,7 @@ function renderTeamPanel(t, el) {
 }
 
 function setTeamName(t, val) {
-  state['team'+t.toUpperCase()].name = val || (t==='a'?'Team A':'Team B');
+  state['team' + t.toUpperCase()].name = val || (t === 'a' ? 'Team A' : 'Team B');
   if (document.getElementById('analysis').classList.contains('active')) {
     document.getElementById('adv-name-a').textContent = state.teamA.name;
     document.getElementById('adv-name-b').textContent = state.teamB.name;
@@ -545,9 +619,9 @@ function setTeamName(t, val) {
 }
 
 function toggleHero(t, id) {
-  const ts = state['team'+t.toUpperCase()];
-  if (ts.heroes.includes(id)) ts.heroes = ts.heroes.filter(h=>h!==id);
-  else { if (ts.heroes.length>=6) return; ts.heroes.push(id); }
+  const ts = state['team' + t.toUpperCase()];
+  if (ts.heroes.includes(id)) ts.heroes = ts.heroes.filter(h => h !== id);
+  else { if (ts.heroes.length >= 6) return; ts.heroes.push(id); }
   renderSetup();
 }
 
@@ -555,34 +629,48 @@ function toggleHero(t, id) {
 function renderAnalysis() {
   document.getElementById('adv-name-a').textContent = state.teamA.name;
   document.getElementById('adv-name-b').textContent = state.teamB.name;
-  renderBench('a'); renderBench('b');
+  renderBench('a');
+  renderBench('b');
   renderStack();
   renderScenarios();
 }
 
 function renderBench(t) {
-  const ts = state['team'+t.toUpperCase()];
-  const usedIds = state.stack.filter(e=>e.team===t).map(e=>e.hero.id);
-  const el = document.getElementById('bench-'+t);
+  const ts  = state['team' + t.toUpperCase()];
+  const el  = document.getElementById('bench-' + t);
+  const usedAbilityIds = state.stack
+    .filter(e => e.team === t)
+    .map(e => e.abilityId);
+
   const roleMap = {};
-  ts.heroes.forEach(id => {
-    const h = HEROES.find(x=>x.id===id); if (!h) return;
-    if (!roleMap[h.role]) roleMap[h.role]=[];
+  ts.heroes.forEach(heroId => {
+    const h = getHero(heroId); if (!h) return;
+    if (!roleMap[h.role]) roleMap[h.role] = [];
     roleMap[h.role].push(h);
   });
-  const nameClass = t==='a' ? 'bench-team-name-a' : 'bench-team-name-b';
-  const cardClass = t==='a' ? 'bench-card-a' : 'bench-card-b';
+
+  const nameClass = t === 'a' ? 'bench-team-name-a' : 'bench-team-name-b';
+  const cardClass = t === 'a' ? 'bench-card-a' : 'bench-card-b';
+
   let html = `<div class="bench-team-name ${nameClass}">${ts.name}</div>`;
-  if (!ts.heroes.length) { html += '<div class="no-scenarios">No heroes selected</div>'; el.innerHTML=html; return; }
+  if (!ts.heroes.length) {
+    html += '<div class="no-scenarios">No heroes selected</div>';
+    el.innerHTML = html; return;
+  }
+
   ROLES_ORDER.forEach(role => {
-    const heroes = roleMap[role]; if (!heroes||!heroes.length) return;
+    const heroes = roleMap[role]; if (!heroes?.length) return;
     html += `<div class="bench-role-group"><div class="bench-role-label">${role}</div>`;
     heroes.forEach(h => {
-      const used = usedIds.includes(h.id);
-      html += `<div class="bench-card ${cardClass} ${used?'used':''}" onclick="addToStack('${t}','${h.id}')">
+      // In v1 only show ults on the bench
+      const ult = getUlt(h);
+      if (!ult) return;
+      const used = usedAbilityIds.includes(ult.id);
+      html += `<div class="bench-card ${cardClass} ${used ? 'used' : ''}"
+          onclick="addToStack('${t}','${h.id}','${ult.id}')">
         <div style="flex:1;min-width:0;">
           <div class="bench-card-name">${h.name}</div>
-          <div class="bench-card-ult">${h.ult}</div>
+          <div class="bench-card-ult">${ult.name}</div>
         </div>
         <div class="add-glyph">+</div>
       </div>`;
@@ -592,14 +680,13 @@ function renderBench(t) {
   el.innerHTML = html;
 }
 
-function addToStack(team, heroId) {
-  const h = HEROES.find(x=>x.id===heroId); if (!h) return;
-  state.stack.push({hero:h, team});
+function addToStack(team, heroId, abilityId) {
+  state.stack.push({ heroId, abilityId, team });
   renderBench('a'); renderBench('b'); renderStack();
 }
 
 function removeFromStack(idx) {
-  state.stack.splice(idx,1);
+  state.stack.splice(idx, 1);
   renderBench('a'); renderBench('b'); renderStack();
 }
 
@@ -610,157 +697,149 @@ function undoLast() {
 }
 
 function clearStack() {
-  state.stack=[];
+  state.stack = [];
   renderBench('a'); renderBench('b'); renderStack();
 }
 
-// ── Scoring ────────────────────────────────────────────────────────────────
-function computeRunning() {
-  // Returns array of {entry, runA, runB, delta, notes} per entry
-  let runA=0, runB=0;
-  return state.stack.map((entry, i) => {
-    const h = entry.hero;
-    const isA = entry.team==='a';
-    let bonus = 0;
-    const notes = [];
-    state.stack.slice(0,i).forEach(prev => {
-      const ph = prev.hero;
-      const opponent = prev.team !== entry.team;
-      if (opponent) {
-        const cv = h.effects[ph.id];
-        if (cv && cv>0) { bonus += cv; notes.push({text:`Counters ${ph.name}'s ${ph.ult}`, val:+cv, type:'counter'}); }
-        const wv = h.countered_by[ph.id];
-        if (wv && wv>0) { bonus -= wv; notes.push({text:`Countered by ${ph.name}'s ${ph.ult}`, val:-wv, type:'weak'}); }
-      } else {
-        const sv = h.effects[ph.id];
-        if (sv && sv>0) {
-          const syn = Math.ceil(sv*0.5);
-          bonus += syn; notes.push({text:`Synergy with ${ph.name}'s ${ph.ult}`, val:+syn, type:'synergy'});
-        }
-      }
-    });
-    const total = 2 + bonus;
-    const delta = total;
-    if (isA) runA = Math.max(0, runA + total); else runB = Math.max(0, runB + total);
-    return { entry, i, notes, delta, runA, runB };
-  });
-}
-
+// ── Stack render ───────────────────────────────────────────────────────────
 function renderStack() {
-  const scroll = document.getElementById('stack-scroll');
-  const empty = document.getElementById('stack-empty');
+  const scroll  = document.getElementById('stack-scroll');
+  const empty   = document.getElementById('stack-empty');
   const running = computeRunning();
-  const lastA = running.length ? running[running.length-1].runA : 0;
-  const lastB = running.length ? running[running.length-1].runB : 0;
+  const lastA   = running.length ? running[running.length - 1].runA : 0;
+  const lastB   = running.length ? running[running.length - 1].runB : 0;
 
   document.getElementById('score-a').textContent = lastA;
   document.getElementById('score-b').textContent = lastB;
 
-  const fill = document.getElementById('adv-fill');
+  const fill    = document.getElementById('adv-fill');
   const verdict = document.getElementById('adv-verdict');
-  const total = lastA + lastB;
+  const total   = lastA + lastB;
+
   if (!total) {
-    fill.style.left='50%'; fill.style.width='0';
-    verdict.textContent='Add ultimates to begin analysis';
+    fill.style.left = '50%'; fill.style.width = '0';
+    verdict.textContent = 'Add ultimates to begin analysis';
   } else {
-    const pA = lastA/total, pB = lastB/total;
+    const pA = lastA / total, pB = lastB / total;
     if (pA > pB) {
-      fill.style.background='var(--gold)';
-      fill.style.left='50%'; fill.style.width=`${(pA-0.5)*200}%`;
-      const str = pA>=0.7?'Dominant advantage':pA>=0.6?'Clear advantage':'Slight edge';
-      verdict.textContent=`${state.teamA.name} leads +${lastA-lastB} — ${str}`;
+      fill.style.background = 'var(--gold)';
+      fill.style.left = '50%';
+      fill.style.width = `${(pA - 0.5) * 200}%`;
+      verdict.textContent = `${state.teamA.name} leads +${lastA - lastB} — ${pA >= 0.7 ? 'Dominant advantage' : pA >= 0.6 ? 'Clear advantage' : 'Slight edge'}`;
     } else if (pB > pA) {
-      fill.style.background='var(--blood-bright)';
-      fill.style.left=`${pA*100}%`; fill.style.width=`${(pB-0.5)*200}%`;
-      const str = pB>=0.7?'Dominant advantage':pB>=0.6?'Clear advantage':'Slight edge';
-      verdict.textContent=`${state.teamB.name} leads +${lastB-lastA} — ${str}`;
+      fill.style.background = 'var(--blood-bright)';
+      fill.style.left = `${pA * 100}%`;
+      fill.style.width = `${(pB - 0.5) * 200}%`;
+      verdict.textContent = `${state.teamB.name} leads +${lastB - lastA} — ${pB >= 0.7 ? 'Dominant advantage' : pB >= 0.6 ? 'Clear advantage' : 'Slight edge'}`;
     } else {
-      fill.style.left='50%'; fill.style.width='0';
-      verdict.textContent='Even matchup — neither side has clear advantage';
+      fill.style.left = '50%'; fill.style.width = '0';
+      verdict.textContent = 'Even matchup — neither side has clear advantage';
     }
   }
+
+  // Clear old entries
+  Array.from(scroll.children).forEach(c => { if (c !== empty) c.remove(); });
 
   if (!state.stack.length) {
-    empty.style.display='flex';
-    Array.from(scroll.children).forEach(c=>{ if(c!==empty) c.remove(); });
-    return;
+    empty.style.display = 'flex'; return;
   }
-  empty.style.display='none';
-  Array.from(scroll.children).forEach(c=>{ if(c!==empty) c.remove(); });
+  empty.style.display = 'none';
 
-  running.forEach(({entry, i, notes, delta}) => {
-    const h = entry.hero;
-    const isA = entry.team==='a';
-    const teamTag = isA ? state.teamA.name.slice(0,2).toUpperCase() : state.teamB.name.slice(0,2).toUpperCase();
+  running.forEach(({ entry, i, notes, delta }) => {
+    const hero = getHero(entry.heroId);
+    const ab   = getAbility(hero, entry.abilityId);
+    if (!hero || !ab) return;
+
+    const isA       = entry.team === 'a';
+    const teamTag   = isA ? state.teamA.name.slice(0, 2).toUpperCase() : state.teamB.name.slice(0, 2).toUpperCase();
     const entryClass = isA ? 'entry-a' : 'entry-b';
-    const tagClass = isA ? 'entry-tag-a' : 'entry-tag-b';
-    const showDelta = notes.length > 0;
-    let deltaHtml = '';
-    if (showDelta) {
-      const net = delta - 2;
-      const cls = net>0 ? 'delta-a' : net<0 ? 'delta-b' : 'delta-neutral';
-      const sign = net>0 ? '+' : '';
-      deltaHtml = `<div class="entry-delta ${cls}">${sign}${net}</div>`;
-    }
-    const notesHtml = notes.map(n => {
-      const arrowClass = n.type==='weak' ? 'note-arrow-blood' : 'note-arrow';
-      const arrow = n.type==='weak' ? '✕' : n.type==='synergy' ? '✦' : '⚡';
-      return `<div class="entry-note"><span class="${arrowClass}">${arrow}</span> ${n.text}</div>`;
+    const tagClass  = isA ? 'entry-tag-a' : 'entry-tag-b';
+
+    // Delta display — only show if interactions changed the base value
+    const net = delta - 2;
+    const deltaHtml = net !== 0
+      ? `<div class="entry-delta ${net > 0 ? 'delta-a' : 'delta-b'}">${net > 0 ? '+' : ''}${net}</div>`
+      : '';
+
+    // Deduplicate notes by (tagA, tagB) pair — multiple ability pairs can
+    // trigger the same relation; collapse them and sum weight
+    const noteMap = new Map();
+    notes.forEach(n => {
+      const key = `${n.tagA}|${n.tagB}|${n.type}`;
+      if (!noteMap.has(key)) noteMap.set(key, { ...n, count: 1 });
+      else noteMap.get(key).count++;
+    });
+
+    const notesHtml = [...noteMap.values()].map(n => {
+      const arrow = n.type === 'weak' ? '✕' : n.type === 'synergy' ? '✦' : '⚡';
+      const arrowClass = n.type === 'weak' ? 'note-arrow-blood' : 'note-arrow';
+      const countStr = n.count > 1 ? ` ×${n.count}` : '';
+      return `<div class="entry-note"><span class="${arrowClass}">${arrow}</span> ${n.text}${countStr}</div>`;
     }).join('');
 
     const el = document.createElement('div');
     el.className = `stack-entry ${entryClass}`;
     el.innerHTML = `
-      <div class="entry-num">${i+1}</div>
+      <div class="entry-num">${i + 1}</div>
       <div class="entry-team-tag ${tagClass}">${teamTag}</div>
       <div class="entry-info">
-        <div><span class="entry-hero">${h.name}</span> <span class="entry-ult">— ${h.ult}</span></div>
-        <div class="entry-tags">${h.tags.map(t=>`<span class="entry-tag">${t}</span>`).join('')}</div>
+        <div><span class="entry-hero">${hero.name}</span> <span class="entry-ult">— ${ab.name}</span></div>
+        <div class="entry-tags">${(ab.tags || []).map(t => `<span class="entry-tag">${t}</span>`).join('')}</div>
         ${notesHtml ? `<div class="entry-notes">${notesHtml}</div>` : ''}
       </div>
       ${deltaHtml}
       <button class="entry-remove" onclick="removeFromStack(${i})" title="Remove">✕</button>`;
     scroll.appendChild(el);
   });
+
   scroll.scrollTop = scroll.scrollHeight;
 }
 
 // ── Scenarios ──────────────────────────────────────────────────────────────
 function openSaveModal() {
-  document.getElementById('scenario-name-input').value='';
+  document.getElementById('scenario-name-input').value = '';
   document.getElementById('save-modal').classList.add('open');
-  setTimeout(()=>document.getElementById('scenario-name-input').focus(),60);
+  setTimeout(() => document.getElementById('scenario-name-input').focus(), 60);
 }
 function closeSaveModal() { document.getElementById('save-modal').classList.remove('open'); }
+
 function confirmSave() {
   const name = document.getElementById('scenario-name-input').value.trim();
   if (!name) return;
   const sc = {
     id: Date.now(), name,
-    teamA:{...state.teamA}, teamB:{...state.teamB},
-    stack: state.stack.map(e=>({heroId:e.hero.id,team:e.team})),
+    teamA: { ...state.teamA },
+    teamB: { ...state.teamB },
+    stack: state.stack.map(e => ({ heroId: e.heroId, abilityId: e.abilityId, team: e.team })),
     savedAt: new Date().toLocaleString(),
   };
   state.scenarios.unshift(sc);
-  localStorage.setItem('ow_ult_scenarios', JSON.stringify(state.scenarios));
+  localStorage.setItem('ow_ult_scenarios_v2', JSON.stringify(state.scenarios));
   closeSaveModal();
   renderScenarios();
 }
+
 function loadScenario(id) {
-  const sc = state.scenarios.find(s=>s.id===id); if (!sc) return;
-  state.teamA={...sc.teamA}; state.teamB={...sc.teamB};
-  state.stack = sc.stack.map(e=>({hero:HEROES.find(h=>h.id===e.heroId),team:e.team})).filter(e=>e.hero);
+  const sc = state.scenarios.find(s => s.id === id); if (!sc) return;
+  state.teamA = { ...sc.teamA };
+  state.teamB = { ...sc.teamB };
+  state.stack = (sc.stack || []).filter(e => getHero(e.heroId));
   renderSetup(); renderAnalysis(); renderScenarios();
+  showScreen('analysis');
 }
+
 function deleteScenario(id) {
-  state.scenarios=state.scenarios.filter(s=>s.id!==id);
-  localStorage.setItem('ow_ult_scenarios', JSON.stringify(state.scenarios));
+  state.scenarios = state.scenarios.filter(s => s.id !== id);
+  localStorage.setItem('ow_ult_scenarios_v2', JSON.stringify(state.scenarios));
   renderScenarios();
 }
+
 function renderScenarios() {
   const el = document.getElementById('scenarios-list');
-  if (!state.scenarios.length) { el.innerHTML='<div class="no-scenarios">No saved scenarios</div>'; return; }
-  el.innerHTML = state.scenarios.map(sc=>`
+  if (!state.scenarios.length) {
+    el.innerHTML = '<div class="no-scenarios">No saved scenarios</div>'; return;
+  }
+  el.innerHTML = state.scenarios.map(sc => `
     <div class="scenario-card">
       <div class="scenario-name">${sc.name}</div>
       <div class="scenario-meta">${sc.teamA.name} vs ${sc.teamB.name} · ${sc.stack.length} ults</div>
@@ -771,30 +850,25 @@ function renderScenarios() {
     </div>`).join('');
 }
 
-document.addEventListener('keydown', e=>{
-  if (e.key==='Escape') closeSaveModal();
-  if (e.key==='Enter' && document.getElementById('save-modal').classList.contains('open')) confirmSave();
+// ── Keyboard ───────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSaveModal();
+  if (e.key === 'Enter' && document.getElementById('save-modal').classList.contains('open')) confirmSave();
 });
 
-// ── Bootstrap — fetch hero database then initialise ───────────────────────
+// ── Bootstrap ──────────────────────────────────────────────────────────────
 (async function init() {
-  // Show a loading indicator in case the fetch takes a moment
   document.getElementById('setup').innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
                 flex:1;gap:1rem;color:var(--text-dim);font-family:'Cinzel',serif;">
       <div style="font-size:2rem;opacity:0.3;">⚔</div>
       <div style="font-size:0.85rem;letter-spacing:0.15em;">Loading hero database…</div>
     </div>`;
-
   try {
     const res = await fetch('./heroes.json');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    DB = await res.json();
 
-    // Populate the module-level array
-    HEROES.push(...data.heroes);
-
-    // Restore the setup screen markup now that we have data
     document.getElementById('setup').innerHTML = `
       <h1 class="setup-heading">Build Your Rosters</h1>
       <p class="setup-sub">Select up to 6 heroes per team, then head to Analysis to stack ultimates</p>
@@ -816,9 +890,9 @@ document.addEventListener('keydown', e=>{
                   flex:1;gap:0.75rem;color:var(--blood-bright);font-family:'Cinzel',serif;text-align:center;padding:2rem;">
         <div style="font-size:2rem;">✕</div>
         <div style="font-size:0.9rem;font-weight:700;letter-spacing:0.1em;">Failed to load hero database</div>
-        <div style="font-size:0.8rem;color:var(--text-dim);font-family:'Crimson Pro',serif;">
-          Could not fetch <code>heroes.json</code>. If running locally, serve the files with a
-          local server (e.g. <code>npx serve .</code>) rather than opening the HTML directly.
+        <div style="font-size:0.8rem;color:var(--text-dim);font-family:'Crimson Pro',serif;max-width:380px;">
+          Could not fetch <code style="color:var(--gold);">heroes.json</code>.
+          Serve the files with a local server (<code>npx serve .</code>) rather than opening the HTML directly.
         </div>
         <button class="btn btn-ghost btn-sm" style="margin-top:0.5rem;" onclick="location.reload()">↩ Retry</button>
       </div>`;
