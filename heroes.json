@@ -1,283 +1,278 @@
 {
   "_meta": {
-    "version": "1.0.0",
-    "description": "Ult Stack hero database — counter relationships and scoring weights",
+    "version": "2.0.0",
+    "description": "Ult Stack hero database",
     "notes": [
-      "effects: positive values mean this hero's ult benefits when the target hero's ult is already in the stack (counter or synergy)",
-      "countered_by: positive values mean THIS hero's ult is weakened when the target hero's ult is already in the stack",
-      "All weights are integers 1–3"
+      "tag_relations: (a, b, context) is a unique key. a = tag on earlier stack entry, b = tag on later entry.",
+      "context: 'same' = both abilities on same team, 'enemy' = opposite teams, 'either' = regardless of team.",
+      "weight: positive = interaction benefits the team adding the later ability. negative = it hurts them.",
+      "ability types: ult, cooldown, primary, secondary, passive"
     ]
   },
+  "tags": {
+    "aoe":       { "label": "AoE",        "desc": "Hits multiple targets in an area" },
+    "cc":        { "label": "CC",         "desc": "Crowd control — stuns, freezes, pulls" },
+    "aerial":    { "label": "Aerial",     "desc": "Operates from or targets the air" },
+    "ground":    { "label": "Ground",     "desc": "Only effective on grounded targets" },
+    "setup":     { "label": "Setup",      "desc": "Creates conditions for follow-up abilities" },
+    "burst":     { "label": "Burst",      "desc": "High damage delivered in a short window" },
+    "shield":    { "label": "Shield",     "desc": "Provides barriers or damage mitigation" },
+    "anti-heal": { "label": "Anti-Heal",  "desc": "Reduces or blocks healing" },
+    "beam":      { "label": "Beam",       "desc": "Piercing linear attack or heal" },
+    "mobile":    { "label": "Mobile",     "desc": "High movement during the ability" },
+    "hitscan":   { "label": "Hitscan",    "desc": "Instant-hit projectiles, no travel time" },
+    "channel":   { "label": "Channel",    "desc": "Requires sustained casting to maintain value" },
+    "knockback": { "label": "Knockback",  "desc": "Displaces enemies on impact" },
+    "group":     { "label": "Group",      "desc": "Pulls or clusters enemies together" },
+    "amp":       { "label": "Amp",        "desc": "Amplifies damage or healing output of allies" },
+    "sustain":   { "label": "Sustain",    "desc": "Provides ongoing healing or damage over time" },
+    "zone":      { "label": "Zone",       "desc": "Controls or denies an area of the map" },
+    "pick":      { "label": "Pick",       "desc": "Targets a single high-value enemy" },
+    "buff":      { "label": "Buff",       "desc": "Enhances an ally's effectiveness" },
+    "bomb":      { "label": "Bomb",       "desc": "Detonating explosive with a delay or trigger" }
+  },
+  "tag_relations": [
+    { "a": "setup",    "b": "aoe",      "context": "same",  "weight":  3, "note": "Grouped targets maximise AoE value" },
+    { "a": "setup",    "b": "burst",    "context": "same",  "weight":  3, "note": "Setup into burst is the core OW combo pattern" },
+    { "a": "setup",    "b": "bomb",     "context": "same",  "weight":  3, "note": "Clustered enemies amplify bomb detonation" },
+    { "a": "group",    "b": "aoe",      "context": "same",  "weight":  3, "note": "Grouping directly multiplies AoE damage" },
+    { "a": "group",    "b": "burst",    "context": "same",  "weight":  2, "note": "Grouped targets can't spread from burst" },
+    { "a": "group",    "b": "bomb",     "context": "same",  "weight":  3, "note": "Bomb into grouped targets is near-guaranteed wipe" },
+    { "a": "cc",       "b": "burst",    "context": "same",  "weight":  2, "note": "CC'd targets cannot escape burst windows" },
+    { "a": "cc",       "b": "aoe",      "context": "same",  "weight":  2, "note": "CC locks targets inside AoE zones" },
+    { "a": "cc",       "b": "pick",     "context": "same",  "weight":  2, "note": "CC removes the target's ability to avoid a pick" },
+    { "a": "amp",      "b": "hitscan",  "context": "same",  "weight":  3, "note": "Amp doubles hitscan output — devastates exposed targets" },
+    { "a": "amp",      "b": "beam",     "context": "same",  "weight":  2, "note": "Amp boosts sustained beam damage significantly" },
+    { "a": "amp",      "b": "burst",    "context": "same",  "weight":  2, "note": "Amp pushes burst past survivability thresholds" },
+    { "a": "buff",     "b": "burst",    "context": "same",  "weight":  3, "note": "Buff on a burst ult user multiplies kill potential" },
+    { "a": "buff",     "b": "mobile",   "context": "same",  "weight":  2, "note": "Buff amplifies mobile dive aggression" },
+    { "a": "buff",     "b": "aoe",      "context": "same",  "weight":  2, "note": "Buff raises AoE damage above shield thresholds" },
+    { "a": "zone",     "b": "setup",    "context": "same",  "weight":  2, "note": "Zone forces enemies into tighter positions for setup" },
+    { "a": "zone",     "b": "aoe",      "context": "same",  "weight":  2, "note": "Zone denial pushes enemies into AoE kill zones" },
+    { "a": "aerial",   "b": "ground",   "context": "enemy", "weight": -2, "note": "Aerial abilities negate ground-only effects entirely" },
+    { "a": "ground",   "b": "aerial",   "context": "enemy", "weight": -2, "note": "Ground abilities miss airborne targets" },
+    { "a": "shield",   "b": "burst",    "context": "enemy", "weight": -3, "note": "Shields absorb burst before it lands" },
+    { "a": "shield",   "b": "aoe",      "context": "enemy", "weight": -2, "note": "Shields mitigate incoming AoE damage" },
+    { "a": "shield",   "b": "bomb",     "context": "enemy", "weight": -2, "note": "Shields can absorb much of a bomb's blast" },
+    { "a": "knockback","b": "channel",  "context": "enemy", "weight": -3, "note": "Knockback scatters or interrupts channeled abilities" },
+    { "a": "knockback","b": "aoe",      "context": "enemy", "weight": -2, "note": "Knockback disperses grouped AoE targets" },
+    { "a": "knockback","b": "setup",    "context": "enemy", "weight": -2, "note": "Knockback breaks the positioning setup requires" },
+    { "a": "knockback","b": "zone",     "context": "enemy", "weight": -1, "note": "Knockback pushes enemies out of denial zones" },
+    { "a": "mobile",   "b": "ground",   "context": "enemy", "weight": -1, "note": "Mobile abilities can escape ground CC" },
+    { "a": "mobile",   "b": "zone",     "context": "enemy", "weight": -1, "note": "Mobile abilities can exit zone denial faster" },
+    { "a": "anti-heal","b": "sustain",  "context": "enemy", "weight": -3, "note": "Anti-heal directly counters sustain abilities" },
+    { "a": "anti-heal","b": "channel",  "context": "enemy", "weight": -2, "note": "Anti-heal forces enemies off healing channels" },
+    { "a": "pick",     "b": "sustain",  "context": "enemy", "weight":  2, "note": "Eliminating a sustain hero removes their channel value" },
+    { "a": "cc",       "b": "mobile",   "context": "enemy", "weight":  2, "note": "CC strips the mobility advantage from mobile ults" }
+  ],
   "heroes": [
     {
       "id": "dva",
       "name": "D.Va",
       "role": "tank",
-      "ult": "Self-Destruct",
-      "tags": ["aoe", "bomb"],
-      "effects": { "zarya": -3, "rein": -2, "sigma": -2, "lucio": -1 },
-      "countered_by": { "pharah": 3, "echo": 2, "lucio": 2, "bap": 2 },
-      "desc": "Massive AoE burst — wipes grouped targets"
+      "abilities": [
+        { "id": "dva_ult", "name": "Self-Destruct", "type": "ult", "tags": ["bomb", "aoe"], "desc": "Massive AoE burst — wipes grouped targets" }
+      ]
     },
     {
       "id": "zarya",
       "name": "Zarya",
       "role": "tank",
-      "ult": "Graviton Surge",
-      "tags": ["cc", "group", "setup"],
-      "effects": { "dva": 2, "rein": 2, "pharah": 2, "mccree": 2, "soldier": 2, "reaper": 2 },
-      "countered_by": { "dva": -3, "lucio": -3, "pharah": -2, "mei": -2 },
-      "desc": "Pulls enemies together — enables follow-up ults"
+      "abilities": [
+        { "id": "zarya_ult", "name": "Graviton Surge", "type": "ult", "tags": ["setup", "group", "cc", "zone"], "desc": "Pulls enemies together — the definitive combo-enabler" }
+      ]
     },
     {
       "id": "rein",
       "name": "Reinhardt",
       "role": "tank",
-      "ult": "Earthshatter",
-      "tags": ["cc", "ground", "knockdown"],
-      "effects": { "reaper": 2, "tracer": 2, "moira": 2, "soldier": 2 },
-      "countered_by": { "pharah": 3, "echo": 3, "dva": 2, "lucio": 2 },
-      "desc": "Ground CC — useless vs aerial heroes"
+      "abilities": [
+        { "id": "rein_ult", "name": "Earthshatter", "type": "ult", "tags": ["cc", "ground", "aoe"], "desc": "Ground-level knockdown — useless vs aerial heroes" }
+      ]
     },
     {
       "id": "sigma",
       "name": "Sigma",
       "role": "tank",
-      "ult": "Gravitic Flux",
-      "tags": ["aoe", "lift", "cc"],
-      "effects": { "reaper": 2, "zarya": 2, "soldier": 2 },
-      "countered_by": { "pharah": 2, "echo": 2, "dva": 1 },
-      "desc": "Lifts and slams — strong combo starter"
+      "abilities": [
+        { "id": "sigma_ult", "name": "Gravitic Flux", "type": "ult", "tags": ["setup", "aoe", "cc"], "desc": "Lifts and slams — strong combo starter" }
+      ]
     },
     {
       "id": "hog",
       "name": "Roadhog",
       "role": "tank",
-      "ult": "Whole Hog",
-      "tags": ["aoe", "knockback", "disrupt"],
-      "effects": { "reaper": 2, "tracer": 2, "moira": 2 },
-      "countered_by": { "rein": 2, "sigma": 2 },
-      "desc": "Close-range knockback disruption"
+      "abilities": [
+        { "id": "hog_ult", "name": "Whole Hog", "type": "ult", "tags": ["knockback", "aoe", "channel"], "desc": "Close-range knockback disruption" }
+      ]
     },
     {
       "id": "orisa",
       "name": "Orisa",
       "role": "tank",
-      "ult": "Terra Surge",
-      "tags": ["aoe", "charge", "cc"],
-      "effects": { "reaper": 2, "soldier": 2, "moira": 2 },
-      "countered_by": { "pharah": 2, "echo": 2, "lucio": 1 },
-      "desc": "Pulls inward and detonates"
+      "abilities": [
+        { "id": "orisa_ult", "name": "Terra Surge", "type": "ult", "tags": ["setup", "cc", "aoe"], "desc": "Pulls inward and detonates" }
+      ]
     },
     {
       "id": "junker",
       "name": "Junker Queen",
       "role": "tank",
-      "ult": "Rampage",
-      "tags": ["anti-heal", "bleed", "engage"],
-      "effects": { "lucio": 2, "ana": 2, "mercy": 2, "moira": 2, "bap": 2 },
-      "countered_by": { "mei": 2, "rein": 1 },
-      "desc": "Cuts healing — counters support-heavy teams"
+      "abilities": [
+        { "id": "junker_ult", "name": "Rampage", "type": "ult", "tags": ["anti-heal", "burst", "mobile"], "desc": "Cuts healing — counters support-heavy teams" }
+      ]
     },
     {
       "id": "ram",
       "name": "Ramattra",
       "role": "tank",
-      "ult": "Annihilation",
-      "tags": ["aoe", "sustained", "lockdown"],
-      "effects": { "reaper": 2, "soldier": 2, "tracer": 2, "moira": 2 },
-      "countered_by": { "pharah": 2, "echo": 2 },
-      "desc": "Sustained AoE vortex — forces scatter or death"
+      "abilities": [
+        { "id": "ram_ult", "name": "Annihilation", "type": "ult", "tags": ["aoe", "zone", "channel", "sustain"], "desc": "Sustained AoE vortex — forces scatter or death" }
+      ]
     },
     {
       "id": "pharah",
       "name": "Pharah",
       "role": "damage",
-      "ult": "Barrage",
-      "tags": ["aoe", "aerial", "projectile"],
-      "effects": { "rein": 3, "zarya": 2, "sigma": 2, "dva": 2 },
-      "countered_by": { "soldier": 3, "mccree": 3, "bap": 2 },
-      "desc": "Airborne barrage — trivializes ground targets"
+      "abilities": [
+        { "id": "pharah_ult", "name": "Barrage", "type": "ult", "tags": ["aoe", "aerial", "burst"], "desc": "Airborne barrage — trivializes ground targets" }
+      ]
     },
     {
       "id": "reaper",
       "name": "Reaper",
       "role": "damage",
-      "ult": "Death Blossom",
-      "tags": ["aoe", "close", "lifesteal"],
-      "effects": { "rein": 2, "sigma": 2, "hog": 2 },
-      "countered_by": { "lucio": 3, "mei": 2, "pharah": 2, "dva": 2 },
-      "desc": "High close-range AoE — hard-countered by knockback"
+      "abilities": [
+        { "id": "reaper_ult", "name": "Death Blossom", "type": "ult", "tags": ["aoe", "burst", "channel", "sustain"], "desc": "High close-range AoE — hard-countered by knockback" }
+      ]
     },
     {
       "id": "soldier",
       "name": "Soldier 76",
       "role": "damage",
-      "ult": "Tactical Visor",
-      "tags": ["aimbot", "sustained", "hitscan"],
-      "effects": { "pharah": 3, "tracer": 2, "genji": 2 },
-      "countered_by": { "dva": 3, "zarya": 2, "mccree": 2 },
-      "desc": "Perfect tracking — destroyed by Defense Matrix"
+      "abilities": [
+        { "id": "soldier_ult", "name": "Tactical Visor", "type": "ult", "tags": ["hitscan", "sustain", "channel"], "desc": "Perfect tracking — destroyed by Defense Matrix" }
+      ]
     },
     {
       "id": "mccree",
       "name": "Cassidy",
       "role": "damage",
-      "ult": "Deadeye",
-      "tags": ["los", "charge", "high-dmg"],
-      "effects": { "pharah": 3, "soldier": 2, "reaper": 2 },
-      "countered_by": { "sigma": 3, "dva": 3, "lucio": 2 },
-      "desc": "Long charge-up multi-kill — nullified by barriers"
+      "abilities": [
+        { "id": "mccree_ult", "name": "Deadeye", "type": "ult", "tags": ["pick", "hitscan", "channel"], "desc": "Long charge-up multi-kill — nullified by barriers" }
+      ]
     },
     {
       "id": "genji",
       "name": "Genji",
       "role": "damage",
-      "ult": "Dragonblade",
-      "tags": ["melee", "mobile", "dive"],
-      "effects": { "mercy": 3, "lucio": 2, "moira": 2 },
-      "countered_by": { "mccree": 3, "zarya": 2, "mei": 2 },
-      "desc": "Mobile melee burst — melts supports"
+      "abilities": [
+        { "id": "genji_ult", "name": "Dragonblade", "type": "ult", "tags": ["burst", "mobile", "pick"], "desc": "Mobile melee burst — melts supports" }
+      ]
     },
     {
       "id": "tracer",
       "name": "Tracer",
       "role": "damage",
-      "ult": "Pulse Bomb",
-      "tags": ["sticky", "burst", "mobile"],
-      "effects": { "rein": 2, "sigma": 2, "hog": 2 },
-      "countered_by": { "zarya": 3, "soldier": 2, "dva": 2 },
-      "desc": "High-value pick potential — outranged by zoners"
+      "abilities": [
+        { "id": "tracer_ult", "name": "Pulse Bomb", "type": "ult", "tags": ["bomb", "pick", "mobile"], "desc": "High-value pick potential — outranged by zoners" }
+      ]
     },
     {
       "id": "echo",
       "name": "Echo",
       "role": "damage",
-      "ult": "Duplicate",
-      "tags": ["copy", "versatile", "aerial"],
-      "effects": { "zarya": 3, "rein": 2, "sigma": 2, "dva": 2 },
-      "countered_by": { "soldier": 2, "mccree": 2 },
-      "desc": "Copies an enemy ult — versatility wildcard"
+      "abilities": [
+        { "id": "echo_ult", "name": "Duplicate", "type": "ult", "tags": ["buff", "aerial", "mobile"], "desc": "Copies an enemy ult — versatility wildcard" }
+      ]
     },
     {
       "id": "mei",
       "name": "Mei",
       "role": "damage",
-      "ult": "Blizzard",
-      "tags": ["cc", "freeze", "zone"],
-      "effects": { "reaper": 3, "zarya": 2, "soldier": 2, "genji": 2 },
-      "countered_by": { "pharah": 2, "echo": 2, "lucio": 1 },
-      "desc": "Blanket freeze — trivializes grounded clusters"
+      "abilities": [
+        { "id": "mei_ult", "name": "Blizzard", "type": "ult", "tags": ["cc", "zone", "aoe"], "desc": "Blanket freeze — trivializes grounded clusters" }
+      ]
     },
     {
       "id": "bastion",
       "name": "Bastion",
       "role": "damage",
-      "ult": "Artillery",
-      "tags": ["aoe", "burst", "artillery"],
-      "effects": { "rein": 2, "orisa": 2, "sigma": 2 },
-      "countered_by": { "pharah": 2, "echo": 2, "dva": 2 },
-      "desc": "Three precise AoE shells — punishes positioning"
+      "abilities": [
+        { "id": "bastion_ult", "name": "Artillery", "type": "ult", "tags": ["burst", "aoe", "zone"], "desc": "Three precise AoE shells — punishes positioning" }
+      ]
     },
     {
       "id": "sym",
       "name": "Symmetra",
       "role": "damage",
-      "ult": "Teleporter",
-      "tags": ["utility", "flank", "reposition"],
-      "effects": {},
-      "countered_by": {},
-      "desc": "Team-wide instant repositioning — highly situational"
+      "abilities": [
+        { "id": "sym_ult", "name": "Teleporter", "type": "ult", "tags": ["mobile", "zone"], "desc": "Team-wide instant repositioning — highly situational" }
+      ]
     },
     {
       "id": "lucio",
       "name": "Lúcio",
       "role": "support",
-      "ult": "Sound Barrier",
-      "tags": ["shields", "instant", "aoe"],
-      "effects": { "dva": 3, "zarya": 3, "rein": 2, "mccree": 2, "soldier": 2, "reaper": 2, "orisa": 2, "ram": 2 },
-      "countered_by": { "sigma": 2, "pharah": 1 },
-      "desc": "Instant team-wide overshield — counters burst ults"
+      "abilities": [
+        { "id": "lucio_ult", "name": "Sound Barrier", "type": "ult", "tags": ["shield", "aoe"], "desc": "Instant team-wide overshield — counters burst ults" }
+      ]
     },
     {
       "id": "mercy",
       "name": "Mercy",
       "role": "support",
-      "ult": "Valkyrie",
-      "tags": ["rez", "sustain", "mobility"],
-      "effects": { "dva": 2, "soldier": 2, "reaper": 2 },
-      "countered_by": { "genji": 3, "tracer": 2, "pharah": 2 },
-      "desc": "Chain heals and rez — weak to dive"
+      "abilities": [
+        { "id": "mercy_ult", "name": "Valkyrie", "type": "ult", "tags": ["buff", "sustain", "mobile"], "desc": "Chain heals and rez — weak to dive" }
+      ]
     },
     {
       "id": "moira",
       "name": "Moira",
       "role": "support",
-      "ult": "Coalescence",
-      "tags": ["beam", "heal", "pierce"],
-      "effects": { "reaper": 2, "soldier": 2, "rein": 2 },
-      "countered_by": { "pharah": 2, "echo": 2, "genji": 2 },
-      "desc": "Piercing beam — outranged by aerial heroes"
+      "abilities": [
+        { "id": "moira_ult", "name": "Coalescence", "type": "ult", "tags": ["beam", "sustain", "channel"], "desc": "Piercing beam — outranged by aerial heroes" }
+      ]
     },
     {
       "id": "ana",
       "name": "Ana",
       "role": "support",
-      "ult": "Nano Boost",
-      "tags": ["buff", "single", "amp"],
-      "effects": { "genji": 3, "rein": 3, "pharah": 3, "dva": 2 },
-      "countered_by": { "tracer": 2, "dva": 2, "echo": 2 },
-      "desc": "Supercharges an ally ult — multiplies team value"
+      "abilities": [
+        { "id": "ana_ult", "name": "Nano Boost", "type": "ult", "tags": ["buff", "pick"], "desc": "Supercharges an ally ult — multiplies team value" }
+      ]
     },
     {
       "id": "bap",
       "name": "Baptiste",
       "role": "support",
-      "ult": "Amplification Matrix",
-      "tags": ["boost", "beam", "zone"],
-      "effects": { "pharah": 3, "soldier": 3, "mccree": 3 },
-      "countered_by": { "genji": 2, "tracer": 2 },
-      "desc": "Doubles projectile damage — devastating with Pharah"
+      "abilities": [
+        { "id": "bap_ult", "name": "Amplification Matrix", "type": "ult", "tags": ["amp", "zone", "beam"], "desc": "Doubles projectile damage — devastating with Pharah" }
+      ]
     },
     {
       "id": "kiri",
       "name": "Kiriko",
       "role": "support",
-      "ult": "Kitsune Rush",
-      "tags": ["speed", "cooldown-reset", "engage"],
-      "effects": { "genji": 2, "dva": 2, "tracer": 2, "zarya": 2 },
-      "countered_by": { "mccree": 2, "soldier": 2 },
-      "desc": "Sprint + cooldown rush — enables aggressive plays"
+      "abilities": [
+        { "id": "kiri_ult", "name": "Kitsune Rush", "type": "ult", "tags": ["buff", "mobile", "aoe"], "desc": "Sprint + cooldown rush — enables aggressive plays" }
+      ]
     },
     {
       "id": "zen",
       "name": "Zenyatta",
       "role": "support",
-      "ult": "Transcendence",
-      "tags": ["immortal", "channel", "cleanse"],
-      "effects": {},
-      "countered_by": { "mccree": 2, "pharah": 2 },
-      "desc": "Near-immortal channel — counters almost all AoE"
+      "abilities": [
+        { "id": "zen_ult", "name": "Transcendence", "type": "ult", "tags": ["sustain", "channel", "aoe"], "desc": "Near-immortal channel — counters almost all AoE" }
+      ]
     },
     {
       "id": "illari",
       "name": "Illari",
       "role": "support",
-      "ult": "Captive Sun",
-      "tags": ["aoe", "burst", "detonate"],
-      "effects": { "rein": 2, "orisa": 2, "sigma": 2, "zarya": 2 },
-      "countered_by": { "pharah": 2, "dva": 2, "echo": 1 },
-      "desc": "Explosive orb marks — strong AoE follow-up"
-    },
-    {
-      "id": "hazard",
-      "name": "Hazard",
-      "role": "tank",
-      "ult": "Needle Storm",
-      "tags": ["aoe", "cc"],
-      "effects": { "zarya": -3, "rein": -2, "sigma": -2, "lucio": -1 },
-      "countered_by": { "pharah": 3, "echo": 2, "lucio": 2, "bap": 2 },
-      "desc": "AoE damage, blockable from above, plus a root on targets hit"
-    },
+      "abilities": [
+        { "id": "illari_ult", "name": "Captive Sun", "type": "ult", "tags": ["burst", "aoe", "zone"], "desc": "Explosive orb marks — strong AoE follow-up" }
+      ]
+    }
   ]
 }
